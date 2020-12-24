@@ -28,6 +28,183 @@
 
 #include "Fl_GDI_Graphics_Driver.H"
 
+#if USE_GDIPLUS
+
+void Fl_GDIplus_Graphics_Driver::point(int x, int y) {
+  graphics_->FillRectangle(brush_, x, y, 1, 1);
+}
+
+void Fl_GDIplus_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
+  // make pen have a one-pixel width
+  pen_->SetWidth(1/scale());
+  loop(x, y, x+w-1, y, x+w-1, y+h-1, x, y+h-1);
+  pen_->SetWidth(line_width_);
+}
+
+void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
+{
+  if (w > 0 && h > 0) {
+    graphics_->DrawRectangle(pen_, x, y, w-1, h-1);
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::focus_rect(int x, int y, int w, int h) {
+  pen_->SetDashStyle(Gdiplus::DashStyleDot);
+  graphics_->DrawRectangle(pen_, x, y, w-1, h-1);
+  pen_->SetDashStyle(Gdiplus::DashStyleSolid);
+}
+
+void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
+  if (w<=0 || h<=0) return;
+  graphics_->FillRectangle(brush_, x, y, w, h);
+}
+
+void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
+  if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
+   graphics_->FillRectangle(brush_, (x < x1 ? x : x1), y, abs(x1 - x), line_width_);
+  } else { graphics_->DrawLine(pen_, x, y, x1, y); }
+}
+
+void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2) {
+  line(x, y, x1, y, x1, y2);
+}
+
+void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
+  line(x, y, x1, y, x1, y2);
+  line(x1, y2, x3, y2);
+}
+
+void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
+  if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
+    graphics_->FillRectangle(brush_, x, (y < y1 ? y : y1), line_width_, abs(y1 - y));
+  } else { graphics_->DrawLine(pen_, x, y, x, y1); }
+}
+
+void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
+  line(x, y, x, y1, x2, y1);
+}
+
+void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
+  line(x, y, x, y1, x2, y1);
+  line(x2, y1, x2, y3);
+}
+
+void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
+  graphics_->DrawLine(pen_, x, y, x1, y1);
+}
+
+void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int y2) {
+  Gdiplus::GraphicsPath path;
+  Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x, y), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
+  path.AddLines(gdi2_p, 3);
+  graphics_->DrawPath(pen_, &path);
+}
+
+void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2) {
+  Gdiplus::GraphicsPath path;
+  Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
+  path.AddLines(gdi2_p, 3);
+  path.CloseFigure();
+  graphics_->DrawPath(pen_, &path);
+}
+
+void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
+  Gdiplus::GraphicsPath path;
+  Gdiplus::Point gdi2_p[4] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2), Gdiplus::Point(x3, y3)};
+  path.AddLines(gdi2_p, 4);
+  path.CloseFigure();
+  graphics_->DrawPath(pen_, &path);
+}
+
+void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2) {
+  Gdiplus::GraphicsPath path;
+  path.AddLine(x0, y0, x1, y1);
+  path.AddLine(x1, y1, x2, y2);
+  path.CloseFigure();
+  graphics_->FillPath(brush_, &path);
+}
+
+void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
+  Gdiplus::GraphicsPath path;
+  path.AddLine(x0, y0, x1, y1);
+  path.AddLine(x1, y1, x2, y2);
+  path.AddLine(x2, y2, x3, y3);
+  path.CloseFigure();
+  graphics_->FillPath(brush_, &path);
+}
+
+// --- clipping
+
+void Fl_GDIplus_Graphics_Driver::push_clip(int x, int y, int w, int h) {
+  Fl_Region r;
+  if (w > 0 && h > 0) {
+    r = XRectangleRegion(x,y,w,h);
+    Fl_Region current = rstack[rstackptr];
+    if (current) {
+      r->Intersect(current);
+    }
+  } else { // make empty clip region:
+    r = new Gdiplus::Region();
+    r->MakeEmpty();
+  }
+  if (rstackptr < region_stack_max) rstack[++rstackptr] = r;
+  else Fl::warning("Fl_GDI_Graphics_Driver::push_clip: clip stack overflow!\n");
+  fl_restore_clip();
+}
+
+int Fl_GDIplus_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
+  X = x; Y = y; W = w; H = h;
+  Gdiplus::Region* r = (Gdiplus::Region*)rstack[rstackptr];
+  if (!r) return 0;
+  // The win32 API makes no distinction between partial and complete
+  // intersection, so we have to check for partial intersection ourselves.
+  // However, given that the regions may be composite, we have to do
+  // some voodoo stuff...
+  Gdiplus::Region* rr = (Gdiplus::Region*)XRectangleRegion(x,y,w,h);
+  Gdiplus::Region* temp = (Gdiplus::Region*)XRectangleRegion(x,y,w,h);//CreateRectRgn(0,0,0,0);
+  int ret;
+  temp->Intersect(r);
+  if (temp->IsEmpty(graphics_)) { // disjoint
+    W = H = 0;
+    ret = 2;
+  } else if (temp->Equals(rr, graphics_)) { // complete
+    ret = 0;
+  } else {      // partial intersection
+    Gdiplus::Rect rect;
+    temp->GetBounds(&rect, graphics_);
+    Gdiplus::Size s; rect.GetSize(&s);
+    X = rect.GetLeft(); Y = rect.GetTop(); W = s.Width; H = s.Height;
+    ret = 1;
+  }
+  delete temp;
+  delete rr;
+  return ret;
+}
+
+int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
+  if (x+w <= 0 || y+h <= 0) return 0;
+  Fl_Region r = rstack[rstackptr];
+  if (!r) return 1;
+  Fl_Region r2 = XRectangleRegion(x, y, w, h);
+  r2->Intersect((Gdiplus::Region*)r);
+  int retval = !r2->IsEmpty(graphics_);
+  delete r2;
+  return retval;
+}
+
+void Fl_GDIplus_Graphics_Driver::restore_clip() {
+  fl_clip_state_number++;
+  if (gc_ && graphics_) {
+    Fl_Region r = rstack[rstackptr];
+    if (r) {
+       graphics_->SetClip(r);
+    } else {
+      graphics_->ResetClip();
+    }
+  }
+}
+
+#else
 
 // --- line and polygon drawing with integer coordinates
 
@@ -272,3 +449,5 @@ void Fl_GDI_Graphics_Driver::restore_clip() {
     if (r) unscale_clip(r);
   }
 }
+
+#endif

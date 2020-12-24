@@ -25,13 +25,134 @@
 
 #include <FL/Fl_Graphics_Driver.H>
 #include <windows.h>
-
+#include <config.h>
 
 /**
   \brief The Windows-specific graphics driver class.
 
   This class is implemented only on the Windows platform.
 */
+#if USE_GDIPLUS
+#include <gdiplus.h>
+
+class FL_EXPORT Fl_GDIplus_Graphics_Driver : public Fl_Graphics_Driver {
+private:
+  int line_width_;
+  int translate_stack_depth; // to support translation
+  static const int translate_stack_max;
+  Gdiplus::GraphicsContainer translate_stack[5];
+  void set_current_();
+  void cache_rgb_(Fl_RGB_Image *img, bool skip_alpha);
+protected:
+  HDC gc_;
+  int numcount;
+  int counts[20];
+  uchar *mask_bitmap_;
+  uchar **mask_bitmap() {return &mask_bitmap_;}
+  int p_size;
+  POINT *p;
+public:
+  Fl_GDIplus_Graphics_Driver();
+  virtual ~Fl_GDIplus_Graphics_Driver();
+  virtual int has_feature(driver_feature mask) { return mask & NATIVE; }
+  char can_do_alpha_blending();
+  virtual void gc(void *ctxt);
+  virtual void *gc() {return gc_;}
+  Gdiplus::Graphics *graphics_;
+  Gdiplus::SolidBrush *brush_;
+  Gdiplus::Pen *pen_;
+  static void shutdown();
+
+  // --- bitmap stuff
+  void delete_bitmask(Fl_Bitmask bm);
+  virtual void draw(const char* str, int n, int x, int y);
+  virtual void draw(const char *str, int nChars, float x, float y) {return draw(str, nChars, int(x), int(y));}
+  virtual void draw(int angle, const char *str, int n, int x, int y);
+  virtual void rtl_draw(const char* str, int n, int x, int y);
+  virtual void font(Fl_Font face, Fl_Fontsize size);
+  virtual Fl_Font font() {return Fl_Graphics_Driver::font();}
+  virtual void draw_rgb(Fl_RGB_Image *img, int XP, int YP, int WP, int HP, int cx, int cy);
+  virtual void draw_image(const uchar* buf, int X,int Y,int W,int H, int D=3, int L=0);
+  virtual void draw_image(Fl_Draw_Image_Cb cb, void* data, int X,int Y,int W,int H, int D=3);
+  virtual void draw_image_mono(const uchar* buf, int X,int Y,int W,int H, int D=1, int L=0);
+  virtual void draw_image_mono(Fl_Draw_Image_Cb cb, void* data, int X,int Y,int W,int H, int D=1);
+  void cache(Fl_Pixmap *img);
+  void draw_pixmap(Fl_Pixmap *pxm, int XP, int YP, int WP, int HP, int cx, int cy);
+  virtual void uncache_pixmap(fl_uintptr_t p);
+  void cache(Fl_Bitmap *img);
+  void draw_bitmap(Fl_Bitmap *pxm, int XP, int YP, int WP, int HP, int cx, int cy);
+  void uncache(Fl_RGB_Image *img, fl_uintptr_t &id_, fl_uintptr_t &mask_);
+  void cache(Fl_RGB_Image *img);
+  virtual double width(const char *str, int n);
+  virtual double width(unsigned int c);
+  void text_extents(const char*, int n, int& dx, int& dy, int& w, int& h);
+  int height();
+  int descent();
+  Fl_Fontsize size();
+  virtual void copy_offscreen(int x, int y, int w, int h, Fl_Offscreen pixmap, int srcx, int srcy);
+  void add_rectangle_to_region(Fl_Region r, int x, int y, int w, int h);
+  Fl_Region XRectangleRegion(int x, int y, int w, int h);
+  void XDestroyRegion(Fl_Region r);
+  void translate_all(int x, int y);
+  void untranslate_all(void);
+  virtual void scale(float f);
+  float scale() {return Fl_Graphics_Driver::scale();}
+  static Fl_RGB_Image *offscreen_to_rgb(Fl_Offscreen off);
+protected:
+  void transformed_vertex0(float x, float y);
+  void transformed_vertex(double x, double y);
+  void vertex(double x, double y);
+  void fixloop();
+  virtual void point(int x, int y);
+  virtual void rect(int x, int y, int w, int h);
+  void focus_rect(int x, int y, int w, int h);
+  void rectf(int x, int y, int w, int h);
+  virtual void line(int x, int y, int x1, int y1);
+  virtual void xyline(int x, int y, int x1);
+  virtual void xyline(int x, int y, int x1, int y2);
+  virtual void xyline(int x, int y, int x1, int y2, int x3);
+  virtual void yxline(int x, int y, int y1);
+  virtual void yxline(int x, int y, int y1, int x2);
+  virtual void yxline(int x, int y, int y1, int x2, int y3);
+  virtual void line(int x, int y, int x1, int y1, int x2, int y2);
+  virtual void loop(int x0, int y0, int x1, int y1, int x2, int y2);
+  virtual void loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+  virtual void polygon(int x0, int y0, int x1, int y1, int x2, int y2);
+  virtual void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+  // --- clipping
+  void push_clip(int x, int y, int w, int h);
+  int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H);
+  int not_clipped(int x, int y, int w, int h);
+  void restore_clip();
+  void begin_complex_polygon();
+  void end_points();
+  void end_line();
+  void end_loop();
+  void end_polygon();
+  void end_complex_polygon();
+  void gap();
+  virtual void circle(double x, double y, double r);
+  virtual void arc(int x, int y, int w, int h, double a1, double a2);
+  virtual void arc(double x, double y, double r, double start, double end) {Fl_Graphics_Driver::arc(x,y,r,start,end);}
+  virtual void pie(int x, int y, int w, int h, double a1, double a2);
+  virtual void line_style(int style, int width = 0, char* dashes = 0);
+  void color(Fl_Color c);
+  Fl_Color color() { return color_; }
+  void color(uchar r, uchar g, uchar b);
+  void set_color(Fl_Color i, unsigned int c);
+  void free_color(Fl_Color i, int overlay);
+  void set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win);
+  virtual Fl_Font set_fonts(const char *name);
+  virtual int get_font_sizes(Fl_Font fnum, int*& sizep);
+  virtual const char* get_font_name(Fl_Font fnum, int* ap);
+  virtual const char *font_name(int num);
+  virtual void font_name(int num, const char *name);
+  void global_gc();
+  virtual void overlay_rect(int x, int y, int w , int h);
+};
+
+#else
+
 class FL_EXPORT Fl_GDI_Graphics_Driver : public Fl_Scalable_Graphics_Driver {
 private:
   BOOL alpha_blend_(int x, int y, int w, int h, HDC src_gc, int srcx, int srcy, int srcw, int srch);
@@ -175,5 +296,6 @@ public:
   void copy_offscreen(int x, int y, int w, int h, Fl_Offscreen bitmap, int srcx, int srcy);
 };
 
+#endif // USE_GDIPLUS
 
 #endif // FL_GDI_GRAPHICS_DRIVER_H

@@ -594,15 +594,22 @@ public:
   Fl_Win32_At_Exit() {}
   ~Fl_Win32_At_Exit() {
     fl_free_fonts(); // do some Windows cleanup
+#if !USE_GDIPLUS
     fl_cleanup_pens();
+#endif
     OleUninitialize();
+#if !USE_GDIPLUS
     if (fl_graphics_driver) fl_brush_action(1);
+#endif
     fl_cleanup_dc_list();
     // This is actually too late in the cleanup process to remove the
     // clipboard notifications, but we have no earlier hook so we try
     // to work around it anyway.
     if (clipboard_wnd != NULL)
       fl_clipboard_notify_untarget(clipboard_wnd);
+#if USE_GDIPLUS
+    Fl_GDIplus_Graphics_Driver::shutdown();
+#endif
   }
 };
 static Fl_Win32_At_Exit win32_at_exit;
@@ -881,23 +888,41 @@ void Fl_WinAPI_System_Driver::paste(Fl_Widget &receiver, int clipboard, const ch
         HDC hdc = GetDC(NULL); // get unit correspondance between .01 mm and screen pixels
         int hmm = GetDeviceCaps(hdc, HORZSIZE);
         int hdots = GetDeviceCaps(hdc, HORZRES);
+        int vmm = GetDeviceCaps(hdc, VERTSIZE);
+        int vdots = GetDeviceCaps(hdc, VERTRES);
         ReleaseDC(NULL, hdc);
-        float factor = (100.f * hmm) / hdots;
+        //float factor = (100.f * hmm) / hdots;
+        float factorw = (100.f * hmm) / hdots;
+        float factorh = (100.f * vmm) / vdots;
         float scaling = Fl::screen_driver()->scale(Fl_Window_Driver::driver(receiver.top_window())->screen_num());
         if (!Fl_Window::current()) {
-          Fl_GDI_Graphics_Driver *d = (Fl_GDI_Graphics_Driver*)&Fl_Graphics_Driver::default_driver();
+          Fl_Graphics_Driver *d = &Fl_Graphics_Driver::default_driver();
           d->scale(scaling);// may run early at app startup before Fl_Window::make_current() scales d
         }
-        width = int(width / (scaling * factor)); // convert to screen pixel unit
-        height = int(height / (scaling * factor));
+        width = int(width / (scaling * factorw)); // convert to screen pixel unit
+        height = int(height / (scaling * factorh));
         RECT rect = {0, 0, width, height};
         Fl_Image_Surface *surf = new Fl_Image_Surface(width, height, 1);
         Fl_Surface_Device::push_current(surf);
         fl_color(FL_WHITE);             // draw white background
         fl_rectf(0, 0, width, height);
+<<<<<<< HEAD
         rect.right = LONG(rect.right * scaling);          // apply scaling to the metafile draw operation
         rect.bottom = LONG(rect.bottom * scaling);
         PlayEnhMetaFile((HDC)fl_graphics_driver->gc(), (HENHMETAFILE)h, &rect); // draw metafile to offscreen buffer
+=======
+        rect.right *= scaling;          // apply scaling to the metafile draw operation
+        rect.bottom *= scaling;
+#if USE_GDIPLUS
+        hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->GetHDC();
+#else
+        hdc = (HDC)fl_graphics_driver->gc();
+#endif
+        PlayEnhMetaFile(hdc, (HENHMETAFILE)h, &rect); // draw metafile to offscreen buffer
+#if USE_GDIPLUS
+        ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->ReleaseHDC(hdc);
+#endif
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
         image = surf->image();
         Fl_Surface_Device::pop_current();
         delete surf;
@@ -1178,7 +1203,7 @@ static int ms2fltk(WPARAM vk, int extended) {
   return extended ? extendedlut[vk] : vklut[vk];
 }
 
-#if USE_COLORMAP
+#if USE_COLORMAP && !USE_GDIPLUS
 extern HPALETTE fl_select_palette(void); // in fl_color_win32.cxx
 #endif
 
@@ -1239,26 +1264,55 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         break;
 
       case WM_PAINT: {
-        Fl_Region R, R2;
         Fl_X *i = Fl_X::i(window);
         Fl_Window_Driver::driver(window)->wait_for_expose_value = 0;
         char redraw_whole_window = false;
         if (!i->region && window->damage()) {
           // Redraw the whole window...
+#if USE_GDIPLUS
+          i->region = new Gdiplus::Region(Gdiplus::Rect(0, 0, window->w(), window->h()));
+#else
           i->region = CreateRectRgn(0, 0, window->w(), window->h());
+#endif
           redraw_whole_window = true;
         }
 
         // We need to merge Windows' damage into FLTK's damage.
-        R = CreateRectRgn(0, 0, 0, 0);
-        int r = GetUpdateRgn(hWnd, R, 0);
+        HRGN R = CreateRectRgn(0, 0, 0, 0);
+        int r = GetUpdateRgn(hWnd, R, 0); // R, the update GDI region is in drawing units
         if (r == NULLREGION && !redraw_whole_window) {
           DeleteObject(R);
           break;
         }
+        
+#if USE_GDIPLUS
+        if (window->type() == FL_DOUBLE_WINDOW)
+          ValidateRgn(hWnd, 0);
+        else {
+          ValidateRgn(hWnd, R);
+        }
+        Gdiplus::Region *gdi_rgn;
+        if (r != NULLREGION) { // non-empty update region
+          Gdiplus::Graphics *gr = ((Fl_WinAPI_Window_Driver*)Fl_Window_Driver::driver(window))->graphics_;
+          gr->SetClip(R); // set update region as the graphics' clipping region
+          Gdiplus::Rect gdi_rect;
+          gr->GetClipBounds(&gdi_rect); // in FLTK units
+          gr->ResetClip(); // the clipping region is handled later by FLTK
+          if (scale != 1) gdi_rect.Inflate(1, 1);
+          gdi_rgn = new Gdiplus::Region(gdi_rect);
+        } else { gdi_rgn = new Gdiplus::Region(); gdi_rgn->MakeEmpty(); }
+        DeleteObject(R);
+        if (i->region) {
+          // Also tell Windows that we are drawing someplace else as well...
+          i->region->Union(gdi_rgn);
+          delete gdi_rgn;
+        } else {
+          i->region = gdi_rgn;
+        }
 
+#else
         // convert i->region in FLTK units to R2 in drawing units
-        R2 = Fl_GDI_Graphics_Driver::scale_region(i->region, scale, NULL);
+        HRGN R2 = Fl_GDI_Graphics_Driver::scale_region(i->region, scale, NULL);
 
         RECT r_box;
         if (scale != 1 && GetRgnBox(R, &r_box) != NULLREGION) {
@@ -1288,16 +1342,20 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
 
         if (scale != 1) DeleteObject(R2);
-
+#endif
         window->clear_damage((uchar)(window->damage() | FL_DAMAGE_EXPOSE));
+#if !USE_GDIPLUS
         // These next two statements should not be here, so that all update
         // is deferred until Fl::flush() is called during idle.  However Windows
         // apparently is very unhappy if we don't obey it and draw right now.
         // Very annoying!
         fl_GetDC(hWnd); // Make sure we have a DC for this window...
-        fl_save_pen();
+      fl_save_pen();
+#endif
         Fl_Window_Driver::driver(window)->flush();
+#if !USE_GDIPLUS
         fl_restore_pen();
+#endif
         window->clear_damage();
         return 0;
       } // case WM_PAINT
@@ -1581,6 +1639,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             //         LOWORD(lParam),HIWORD(lParam),scale);
           }
         }
+#if USE_GDIPLUS
+        if (wParam != SIZE_MINIMIZED && wParam != SIZE_MAXHIDE) {
+          delete Fl_WinAPI_Window_Driver::driver(window)->graphics_;
+          Fl_WinAPI_Window_Driver::driver(window)->graphics_ = new Gdiplus::Graphics(fl_xid(window));
+          Fl_WinAPI_Window_Driver::driver(window)->graphics_->ScaleTransform(scale, scale);
+          //essai
+          Fl_WinAPI_Window_Driver::driver(window)->graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintSingleBitPerPixelGridFit);
+        }
+#endif
         break;
 
       case WM_MOVE: {
@@ -1629,7 +1696,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
         break;
 
-#if USE_COLORMAP
+#if USE_COLORMAP && !USE_GDIPLUS
       case WM_QUERYNEWPALETTE:
         fl_GetDC(hWnd);
         if (fl_select_palette())
@@ -2163,7 +2230,10 @@ Fl_X *Fl_WinAPI_Window_Driver::makeWindow() {
                           );
   if (lab)
     free(lab);
-
+#if USE_GDIPLUS
+  graphics_ = new Gdiplus::Graphics(x->xid);
+  graphics_->ScaleTransform(s, s);
+#endif
   x->next = Fl_X::first;
   Fl_X::first = x;
 

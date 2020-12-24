@@ -22,6 +22,218 @@
 #include <FL/fl_draw.H>
 #include "../../Fl_Screen_Driver.H"
 
+/* Reference to the current device context
+ For back-compatibility only. The preferred procedure to get this reference is
+ Fl_Surface_Device::surface()->driver()->gc().
+ */
+HDC fl_gc = 0;
+
+
+typedef BOOL(WINAPI* flTypeImmAssociateContextEx)(HWND, HIMC, DWORD);
+extern flTypeImmAssociateContextEx flImmAssociateContextEx;
+typedef HIMC(WINAPI* flTypeImmGetContext)(HWND);
+extern flTypeImmGetContext flImmGetContext;
+typedef BOOL(WINAPI* flTypeImmSetCompositionWindow)(HIMC, LPCOMPOSITIONFORM);
+extern flTypeImmSetCompositionWindow flImmSetCompositionWindow;
+typedef BOOL(WINAPI* flTypeImmReleaseContext)(HWND, HIMC);
+extern flTypeImmReleaseContext flImmReleaseContext;
+
+
+void
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver
+#else
+  Fl_GDI_Graphics_Driver
+#endif
+    ::set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win)
+{
+  if (!win) return;
+  Fl_Window* tw = win;
+  while (tw->parent()) tw = tw->window(); // find top level window
+
+  if (!tw->shown())
+    return;
+
+  HIMC himc = flImmGetContext(fl_xid(tw));
+
+  if (himc) {
+    COMPOSITIONFORM cfs;
+    cfs.dwStyle = CFS_POINT;
+    cfs.ptCurrentPos.x = X;
+    cfs.ptCurrentPos.y = Y - tw->labelsize();
+    MapWindowPoints(fl_xid(win), fl_xid(tw), &cfs.ptCurrentPos, 1);
+    flImmSetCompositionWindow(himc, &cfs);
+    flImmReleaseContext(fl_xid(tw), himc);
+  }
+}
+
+
+#if USE_GDIPLUS
+
+Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() {
+  mask_bitmap_ = NULL;
+  gc_ = NULL;
+  p_size = 0;
+  p = NULL;
+  graphics_ = NULL;
+  translate_stack_depth = 0;
+  brush_ = new Gdiplus::SolidBrush(Gdiplus::Color());
+  pen_ = new Gdiplus::Pen(Gdiplus::Color(), 1);
+}
+
+Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
+  if (p) free(p);
+  delete brush_;
+  delete pen_;
+}
+
+static ULONG_PTR gdiplusToken;
+
+/*
+ * By linking this module, the following static method will instantiate the
+ * Windows GDI Graphics driver as the main display driver.
+ */
+Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
+{
+  // Initialize GDI+.
+  static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+  if (gdiplusToken == 0) GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+  
+  return new Fl_GDIplus_Graphics_Driver();
+}
+
+void Fl_GDIplus_Graphics_Driver::shutdown() {
+  Gdiplus::GdiplusShutdown(gdiplusToken);
+}
+
+void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
+  gc_ = (HDC)ctxt;
+  global_gc();
+}
+
+void Fl_GDIplus_Graphics_Driver::global_gc()
+{
+  fl_gc = (HDC)gc();
+}
+
+/*
+ * This function checks if the version of Windows that we
+ * curently run on supports alpha blending for bitmap transfers
+ * and finds the required function if so.
+ */
+char Fl_GDIplus_Graphics_Driver::can_do_alpha_blending() {
+  return 1;
+}
+
+void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_Offscreen bitmap, int srcx, int srcy) {
+  if (srcx < 0) {w += srcx; x -= srcx; srcx = 0;}
+  if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
+  int off_width = bitmap->GetWidth()/scale();
+  int off_height = bitmap->GetHeight()/scale();
+  if (srcx + w >= off_width) {w = off_width - srcx;}
+  if (srcy + h >= off_height) {h = off_height - srcy;}
+  if (w <= 0 || h <= 0) return;
+  push_clip(x, y, w, h);
+  graphics_->DrawImage(bitmap, Gdiplus::Rect(x-srcx, y-srcy, off_width, off_height));
+  pop_clip();
+}
+
+void Fl_GDIplus_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
+  r->Union(Gdiplus::Rect(X,Y,W,H));
+}
+
+void Fl_GDIplus_Graphics_Driver::transformed_vertex0(float x, float y) {
+  if (!n || x != p[n-1].x || y != p[n-1].y) {
+    if (n >= p_size) {
+      p_size = p ? 2*p_size : 16;
+      p = (POINT*)realloc((void*)p, p_size*sizeof(*p));
+    }
+    p[n].x = x;
+    p[n].y = y;
+    n++;
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::fixloop() {  // remove equal points from closed path
+  while (n>2 && p[n-1].x == p[0].x && p[n-1].y == p[0].y) n--;
+}
+
+Fl_Region Fl_GDIplus_Graphics_Driver::XRectangleRegion(int x, int y, int w, int h) {
+  return new Gdiplus::Region(Gdiplus::Rect(x,y,w,h));
+}
+
+void Fl_GDIplus_Graphics_Driver::XDestroyRegion(Fl_Region r) {
+  delete r;
+}
+
+void Fl_GDIplus_Graphics_Driver::scale(float f) {
+  if (f != scale()) {
+    size_ = 0;
+    Fl_Graphics_Driver::scale(f);
+    line_style(FL_SOLID); // scale also default line width
+  }
+}
+
+const int Fl_GDIplus_Graphics_Driver::translate_stack_max = 5;
+
+void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y)
+{
+  if (translate_stack_depth < translate_stack_max) {
+    translate_stack[translate_stack_depth++] = graphics_->BeginContainer();
+    graphics_->TranslateTransform(x, y);
+    }
+}
+
+void Fl_GDIplus_Graphics_Driver::untranslate_all(void)
+{
+  if (translate_stack_depth > 0) {
+    graphics_->EndContainer(translate_stack[--translate_stack_depth]);
+    }
+}
+
+void Fl_GDIplus_Graphics_Driver::set_current_() {
+  restore_clip();
+}
+
+void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
+  if (w <= 0 || h <= 0) return;
+  graphics_->DrawArc(pen_, x, y, w, h, -a1, -(a2-a1));
+}
+
+void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
+  if (w <= 0 || h <= 0) return;
+  graphics_->FillPie(brush_, x, y, w, h, -a1, -(a2-a1));
+}
+
+Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscreen) {
+  int w = offscreen->GetWidth(), h = offscreen->GetHeight();
+  Gdiplus::Rect rect(0, 0, w, h);
+  Gdiplus::BitmapData bmdata;
+  int ld = ((3*w+3)/4)*4;
+  uchar *array = new uchar[ld*h];
+  bmdata.Width = w;
+  bmdata.Height = h;
+  bmdata.Stride = ld;
+  bmdata.PixelFormat = PixelFormat24bppRGB;
+  bmdata.Scan0 = array;
+  offscreen->LockBits(&rect, Gdiplus::ImageLockModeUserInputBuf | Gdiplus::ImageLockModeRead, PixelFormat24bppRGB, &bmdata);
+  offscreen->UnlockBits(&bmdata);
+  uchar *from = array;
+  for (int i = 0; i < h; i++) { // convert BGR to RGB
+    for (uchar* p = from; p < from+3*w; p += 3) {
+      uchar q = *p; // exchange R and B pixels
+      *p = *(p+2);
+      *(p+2) = q;
+    }
+    from += ld;
+  }
+  Fl_RGB_Image *image = new Fl_RGB_Image(array, w, h, 3, ld);
+  image->alloc_array = 1;
+  return image;
+}
+
+#else
+
 /*
  * By linking this module, the following static method will instantiate the
  * Windows GDI Graphics driver as the main display driver.
@@ -39,12 +251,6 @@ typedef BOOL (WINAPI* fl_alpha_blend_func)
 (HDC,int,int,int,int,HDC,int,int,int,int,FL_BLENDFUNCTION);
 static fl_alpha_blend_func fl_alpha_blend = NULL;
 static FL_BLENDFUNCTION blendfunc = { 0, 0, 255, 1};
-
-/* Reference to the current device context
- For back-compatibility only. The preferred procedure to get this reference is
- Fl_Surface_Device::surface()->driver()->gc().
- */
-HDC fl_gc = 0;
 
 void Fl_GDI_Graphics_Driver::global_gc()
 {
@@ -203,39 +409,6 @@ void Fl_GDI_Graphics_Driver::XDestroyRegion(Fl_Region r) {
 }
 
 
-typedef BOOL(WINAPI* flTypeImmAssociateContextEx)(HWND, HIMC, DWORD);
-extern flTypeImmAssociateContextEx flImmAssociateContextEx;
-typedef HIMC(WINAPI* flTypeImmGetContext)(HWND);
-extern flTypeImmGetContext flImmGetContext;
-typedef BOOL(WINAPI* flTypeImmSetCompositionWindow)(HIMC, LPCOMPOSITIONFORM);
-extern flTypeImmSetCompositionWindow flImmSetCompositionWindow;
-typedef BOOL(WINAPI* flTypeImmReleaseContext)(HWND, HIMC);
-extern flTypeImmReleaseContext flImmReleaseContext;
-
-
-void Fl_GDI_Graphics_Driver::set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win)
-{
-  if (!win) return;
-  Fl_Window* tw = win;
-  while (tw->parent()) tw = tw->window(); // find top level window
-
-  if (!tw->shown())
-    return;
-
-  HIMC himc = flImmGetContext(fl_xid(tw));
-
-  if (himc) {
-    COMPOSITIONFORM cfs;
-    cfs.dwStyle = CFS_POINT;
-    cfs.ptCurrentPos.x = X;
-    cfs.ptCurrentPos.y = Y - tw->labelsize();
-    MapWindowPoints(fl_xid(win), fl_xid(tw), &cfs.ptCurrentPos, 1);
-    flImmSetCompositionWindow(himc, &cfs);
-    flImmReleaseContext(fl_xid(tw), himc);
-  }
-}
-
-
 void Fl_GDI_Graphics_Driver::scale(float f) {
   if (f != scale()) {
     size_ = 0;
@@ -287,6 +460,7 @@ void Fl_GDI_Graphics_Driver::set_current_() {
   restore_clip();
 }
 
+<<<<<<< HEAD
 void Fl_GDI_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height)
 {
   float s = scale();
@@ -294,3 +468,6 @@ void Fl_GDI_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height)
   height = (s == int(s) ? height * int(s) : floor(height+1));
   cache_size_finalize(img, width, height);
 }
+=======
+#endif
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI

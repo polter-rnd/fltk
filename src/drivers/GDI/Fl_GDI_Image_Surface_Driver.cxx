@@ -14,7 +14,7 @@
 //     https://www.fltk.org/bugs.php
 //
 
-
+#include <config.h>
 #include "Fl_GDI_Graphics_Driver.H"
 #include "../WinAPI/Fl_WinAPI_Screen_Driver.H"
 #include <FL/Fl_Image_Surface.H>
@@ -25,14 +25,16 @@ class Fl_GDI_Image_Surface_Driver : public Fl_Image_Surface_Driver {
   virtual void end_current();
 public:
   Window pre_window;
+#if !USE_GDIPLUS
   int _savedc;
+  POINT origin;
+#endif
   Fl_GDI_Image_Surface_Driver(int w, int h, int high_res, Fl_Offscreen off);
   ~Fl_GDI_Image_Surface_Driver();
   void set_current();
   void translate(int x, int y);
   void untranslate();
   Fl_RGB_Image *image();
-  POINT origin;
 };
 
 
@@ -48,55 +50,96 @@ Fl_GDI_Image_Surface_Driver::Fl_GDI_Image_Surface_Driver(int w, int h, int high_
     w = int(w*d);
     h = int(h*d);
   }
+#if USE_GDIPLUS
+  if (!off) {
+    offscreen = new Gdiplus::Bitmap(w, h, PixelFormat32bppARGB);
+  } else { offscreen = off; }
+  driver(new Fl_GDIplus_Graphics_Driver);
+  if (off || !high_res) d = 1;
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = new Gdiplus::Graphics(offscreen);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(d, d);
+  driver()->scale(d);
+#else
   HDC gc = (HDC)Fl_Graphics_Driver::default_driver().gc();
   offscreen = off ? off : CreateCompatibleBitmap( (gc ? gc : fl_GetDC(0) ) , w, h);
   if (!offscreen) offscreen = CreateCompatibleBitmap(fl_GetDC(0), w, h);
   driver(new Fl_GDI_Graphics_Driver);
   if (d != 1 && high_res) ((Fl_GDI_Graphics_Driver*)driver())->scale(d);
   origin.x = origin.y = 0;
+#endif
 }
 
 
 Fl_GDI_Image_Surface_Driver::~Fl_GDI_Image_Surface_Driver() {
+#if USE_GDIPLUS
+  if (!external_offscreen) delete (Gdiplus::Bitmap*)offscreen;
+  delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_;
+#else
   if (offscreen && !external_offscreen) DeleteObject(offscreen);
+#endif
   delete driver();
 }
 
 
 void Fl_GDI_Image_Surface_Driver::set_current() {
+#if USE_GDIPLUS
+  HDC gc = (HDC)Fl_Graphics_Driver::default_driver().gc();
+#else
   HDC gc = fl_makeDC(offscreen);
+#endif
   driver()->gc(gc);
+#if !USE_GDIPLUS
   SetWindowOrgEx(gc, origin.x, origin.y, NULL);
+#endif
   Fl_Surface_Device::set_current();
   pre_window = fl_window;
+#if !USE_GDIPLUS
   _savedc = SaveDC(gc);
+#endif
   fl_window=(HWND)offscreen;
 }
 
 
 void Fl_GDI_Image_Surface_Driver::translate(int x, int y) {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->translate_all(x, y);
+#else
   ((Fl_GDI_Graphics_Driver*)driver())->translate_all(x, y);
+#endif
 }
 
 
 void Fl_GDI_Image_Surface_Driver::untranslate() {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->untranslate_all();
+#else
   ((Fl_GDI_Graphics_Driver*)driver())->untranslate_all();
+#endif
 }
 
 
 Fl_RGB_Image* Fl_GDI_Image_Surface_Driver::image()
 {
-  Fl_RGB_Image *image = Fl::screen_driver()->read_win_rectangle( 0, 0, width, height, 0);
+  Fl_RGB_Image *image =
+#if USE_GDIPLUS
+    Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(offscreen);
+  image->scale(width, height, 0, 1);
+#else
+    Fl::screen_driver()->read_win_rectangle( 0, 0, width, height, 0);
+#endif
   return image;
 }
 
 
 void Fl_GDI_Image_Surface_Driver::end_current()
 {
+#if USE_GDIPLUS
+  driver()->gc(0);
+#else
   HDC gc = (HDC)driver()->gc();
-  GetWindowOrgEx(gc, &origin);
   RestoreDC(gc, _savedc);
   DeleteDC(gc);
+#endif
   fl_window = pre_window;
   Fl_Surface_Device::end_current();
 }

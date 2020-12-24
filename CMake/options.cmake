@@ -52,6 +52,17 @@ if (UNIX)
   list (APPEND FLTK_LDLIBS -lm)
 endif (UNIX)
 
+if (WIN32)
+  option (OPTION_USE_GDIPLUS "use GDI+ rather than GDI for Windows platform" OFF)
+  if (OPTION_USE_GDIPLUS)
+    set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lgdiplus" CACHE
+       STRING "Libraries for C++ applications" FORCE)
+    add_definitions (-DUSE_GDIPLUS)
+    list (APPEND FLTK_CFLAGS "-DUSE_GDIPLUS")
+    list (APPEND FLTK_LDLIBS "-lgdiplus")
+  endif (OPTION_USE_GDIPLUS)
+endif (WIN32)
+
 #######################################################################
 if (APPLE)
   option (OPTION_APPLE_X11 "use X11" OFF)

@@ -103,10 +103,23 @@ typedef int FL_SOCKET;
 #  define FL_CONTROL    FL_CTRL
 
 #elif defined(_WIN32)
+#  if USE_GDIPLUS
+#    ifdef __cplusplus
+      namespace Gdiplus {class Bitmap; class Region;}
+      typedef Gdiplus::Bitmap* Fl_Offscreen;
+      typedef Gdiplus::Region* Fl_Region;
+      typedef class Fl_GdiPlusBitmap* Fl_Bitmask;
+#    else
+      typedef void* Fl_Offscreen;
+      typedef void* Fl_Region;
+      typedef void* Fl_Bitmask;
+#    endif // __cplusplus
+#  else
 typedef struct HBITMAP__ *HBITMAP;
 typedef HBITMAP Fl_Offscreen;
 typedef HBITMAP Fl_Bitmask;
 typedef struct HRGN__ *Fl_Region;
+#  endif // USE_GDIPLUS
 # if defined(_WIN64) && defined(_MSC_VER)
 typedef  unsigned __int64 FL_SOCKET;    /* *FIXME* - FL_SOCKET (see above) */
 # else

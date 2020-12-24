@@ -71,7 +71,7 @@ uchar *fl_read_image(uchar *p, int X, int Y, int w, int h, int alpha) {
     img = img2;
   }
   if (img) {
-    if (img->w() != w || img->h() != h) {
+    if (img->w() != w || img->h() != h || (img->ld() && img->ld() != img->w() * img->d()) ) {
       Fl_RGB_Image *img2 = (Fl_RGB_Image*)img->copy(w, h);
       delete img;
       img = img2;

@@ -41,6 +41,9 @@
  ? where do we handle the interface between OpenGL/DirectX and Cocoa/Windows/Glx?
  */
 
+#if USE_GDIPLUS
+namespace Gdiplus { class Graphics; }
+#endif
 
 struct Fl_Window_Driver::shape_data_type {
   int lw_; ///<  width of shape image
@@ -70,7 +73,9 @@ public:
   RECT border_width_title_bar_height(int &bx, int &by, int &bt);
   virtual void screen_num(int n);
   virtual int screen_num();
-
+#if USE_GDIPLUS
+  Gdiplus::Graphics *graphics_;
+#endif
   struct icon_data *icon_;
   HCURSOR cursor;
   int custom_cursor;

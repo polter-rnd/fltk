@@ -137,6 +137,13 @@ AC_ARG_ENABLE([xinerama], AS_HELP_STRING([--disable-xinerama], [turn off Xineram
 
 AC_ARG_ENABLE([xrender], AS_HELP_STRING([--disable-xrender], [turn off Xrender support]))
 
+AS_CASE([$host_os], [cygwin* | mingw*], [
+  AC_ARG_ENABLE([gdiplus], AS_HELP_STRING([--enable-gdiplus], [use GDI+ rather than GDI (default=no)]))
+  AS_IF([test x$enable_gdiplus = xyes], [
+    AC_DEFINE([USE_GDIPLUS], 1, [Graphics through GDI+])
+  ])
+])
+
 AS_IF([test x$enable_pango = xyes -a x$enable_xft = xno], [
     AC_MSG_ERROR([--disable-xft and --enable-pango are incompatible because Xft is necessary for Pango.])
 ])
@@ -887,6 +894,19 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     LDFLAGS="-mwindows $LDFLAGS"
     DSOFLAGS="-mwindows $DSOFLAGS"
     LIBS="$LIBS -lole32 -luuid -lcomctl32 -lws2_32"
+            
+#        AC_ARG_ENABLE(gdiplus, [  --enable-gdiplus        use GDI+ rather than GDI [[default=no]]])
+#        if test x$enable_gdiplus = xyes; then
+#          CFLAGS="$CFLAGS -DUSE_GDIPLUS"
+#          CXXFLAGS="$CXXFLAGS -DUSE_GDIPLUS"
+#          LIBS="$LIBS -lgdiplus"
+#        fi
+    AS_IF([test x$enable_gdiplus = xyes], [
+          CFLAGS="$CFLAGS -DUSE_GDIPLUS"
+          CXXFLAGS="$CXXFLAGS -DUSE_GDIPLUS"
+          LIBS="$LIBS -lgdiplus"
+        ])
+    
     BUILD="WIN"
     AS_IF([test "x$with_optim" = x], [
         dnl Avoid -Os optimization on Cygwin/MinGW
@@ -1522,7 +1542,10 @@ echo "Configuration Summary"
 echo "-------------------------------------------------------------------------"
 
 AS_CASE([$host_os_gui], [cygwin* | mingw*], [
-    graphics="GDI"
+#    graphics="GDI"
+    
+    AS_IF([test x$enable_gdiplus = xyes], [graphics="GDI+"], [graphics="GDI"])
+    
 ], [darwin*], [
     graphics="Quartz"
 ], [*], [

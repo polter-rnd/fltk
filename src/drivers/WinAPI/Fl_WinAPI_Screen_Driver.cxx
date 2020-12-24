@@ -17,10 +17,18 @@
 
 #include <config.h>
 #include "Fl_WinAPI_Screen_Driver.H"
-#include "../GDI/Fl_Font.H"
 #include <FL/Fl.H>
 #include <FL/platform.H>
+<<<<<<< HEAD
 #include "../GDI/Fl_GDI_Graphics_Driver.H"
+=======
+#if USE_GDIPLUS
+#  include "../GDI/Fl_GDI_Graphics_Driver.H"
+#else
+#  include "../GDI/Fl_Font.H"
+#  include <FL/Fl_Graphics_Driver.H>
+#endif
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
 #include <FL/Fl_RGB_Image.H>
 #include <FL/fl_ask.H>
 #include <stdio.h>
@@ -499,14 +507,41 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
 {
   float s = Fl_Surface_Device::surface()->driver()->scale();
   int ws, hs;
+<<<<<<< HEAD
   if (int(s) == s) { ws = w * int(s); hs = h * int(s);}
+=======
+<<<<<<< HEAD
+  if (int(s) == s) { ws = int(w * s); hs = int(h * s);}
+=======
+#if USE_GDIPLUS
+  if (!win) { // read from off-screen buffer
+    Gdiplus::Bitmap *bitmap = (Gdiplus::Bitmap*)fl_window;
+    Gdiplus::Bitmap *part = bitmap->Clone(int(X*s), int(Y*s), int(w*s), int(h*s), PixelFormat32bppARGB);
+    Fl_RGB_Image *image = Fl_GDIplus_Graphics_Driver::offscreen_to_rgb((Fl_Offscreen)part);
+    delete part;
+    return image;
+  }
+  ws = w * s; hs = h * s;
+#else
+  if (int(s) == s) { ws = w * s; hs = h * s;}
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
   else {
     ws = Fl_GDI_Graphics_Driver::floor(w+1, s); // approximates what Fl_Graphics_Driver::cache_size() does
     hs = Fl_GDI_Graphics_Driver::floor(h+1, s);
     if (ws < 1) ws = 1;
     if (hs < 1) hs = 1;
   }
+<<<<<<< HEAD
   return read_win_rectangle_unscaled(Fl_GDI_Graphics_Driver::floor(X, s), Fl_GDI_Graphics_Driver::floor(Y, s), ws, hs, win);
+=======
+<<<<<<< HEAD
+  return read_win_rectangle_unscaled(int(X*s), int(Y*s), ws, hs, win);
+=======
+#endif
+  return read_win_rectangle_unscaled(X*s, Y*s, ws, hs, win);
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
+>>>>>>> Add option to have Windows platform use GDI+ rather that GDI
 }
 
 Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y, int w, int h, Fl_Window *win)
@@ -562,7 +597,11 @@ Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y,
 
   // copy bitmap from original DC (Window, Fl_Offscreen, ...)
   if (win && Fl_Window::current() != win) win->make_current();
-  HDC gc = (HDC)fl_graphics_driver->gc();
+  HDC gc =
+#if USE_GDIPLUS
+  win ? ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_->GetHDC() :
+#endif
+    (HDC)fl_graphics_driver->gc();
   HDC hdc = CreateCompatibleDC(gc);
   HBITMAP hbm = CreateCompatibleBitmap(gc,w,h);
 
@@ -594,7 +633,9 @@ Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y,
   DeleteDC(hdc);
   DeleteObject(hbm);
   delete[] dib;         // delete DIB temporary buffer
-
+#if USE_GDIPLUS
+  if (win) ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_->ReleaseHDC(gc);
+#endif
   Fl_RGB_Image *rgb = new Fl_RGB_Image(p, w, h, 3);
   rgb->alloc_array = 1;
   return rgb;
@@ -603,11 +644,16 @@ Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y,
 
 void Fl_WinAPI_Screen_Driver::offscreen_size(Fl_Offscreen off, int &width, int &height)
 {
+#if USE_GDIPLUS
+  width = ((Gdiplus::Bitmap*)off)->GetWidth();
+  height = ((Gdiplus::Bitmap*)off)->GetHeight();
+#else
   BITMAP bitmap;
   if ( GetObject(off, sizeof(BITMAP), &bitmap) ) {
     width = bitmap.bmWidth;
     height = bitmap.bmHeight;
   }
+#endif
 }
 
 //NOTICE: returns -1 if x,y is not in any screen

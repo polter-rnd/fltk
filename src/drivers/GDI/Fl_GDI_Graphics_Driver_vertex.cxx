@@ -27,6 +27,125 @@
 #include <FL/platform.H>
 #include <FL/math.h>
 
+#if USE_GDIPLUS
+
+void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
+  transformed_vertex0(xf , yf );
+}
+
+void Fl_GDIplus_Graphics_Driver::vertex(double x,double y) {
+  transformed_vertex0((x*m.a + y*m.c + m.x) , (x*m.b + y*m.d + m.y) );
+}
+
+void Fl_GDIplus_Graphics_Driver::end_points() {
+  //for (int i=0; i<n; i++) SetPixel(gc_, p[i].x, p[i].y, fl_RGB());
+}
+
+void Fl_GDIplus_Graphics_Driver::end_line() {
+  if (n < 2) {
+    end_points();
+    return;
+  }
+  if (n>1) {
+    Gdiplus::GraphicsPath path;
+    Gdiplus::Point *gdi2_p = new Gdiplus::Point[n];
+    for (int i = 0; i < n; i++) {
+      gdi2_p[i] = Gdiplus::Point(p[i].x, p[i].y);
+    }
+    path.AddLines(gdi2_p, n);
+    delete[] gdi2_p;
+    graphics_->DrawPath(pen_, &path);
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::end_loop() {
+  fixloop();
+  if (n>2) {
+    Gdiplus::GraphicsPath path;
+    Gdiplus::Point *gdi2_p = new Gdiplus::Point[n];
+    for (int i = 0; i < n; i++) {
+      gdi2_p[i] = Gdiplus::Point(p[i].x, p[i].y);
+    }
+    path.AddLines(gdi2_p, n);
+    path.CloseFigure();
+    delete[] gdi2_p;
+    graphics_->DrawPath(pen_, &path);
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::end_polygon() {
+  fixloop();
+  if (n < 3) {
+    end_line();
+    return;
+  }
+  if (n>2) {
+    Gdiplus::GraphicsPath path;
+    Gdiplus::Point *gdi2_p = new Gdiplus::Point[n];
+    for (int i = 0; i < n; i++) {
+      gdi2_p[i] = Gdiplus::Point(p[i].x, p[i].y);
+    }
+    path.AddPolygon(gdi2_p, n);
+    delete[] gdi2_p;
+    path.CloseFigure();
+    graphics_->FillPath(brush_, &path);
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::begin_complex_polygon() {
+  begin_polygon();
+  gap_ = 0;
+  numcount = 0;
+}
+
+void Fl_GDIplus_Graphics_Driver::gap() {
+  while (n>gap_+2 && p[n-1].x == p[gap_].x && p[n-1].y == p[gap_].y) n--;
+  if (n > gap_+2) {
+    transformed_vertex0(p[gap_].x, p[gap_].y);
+    counts[numcount++] = n-gap_;
+    gap_ = n;
+  } else {
+    n = gap_;
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
+  gap();
+  if (n < 3) {
+    end_line();
+    return;
+  }
+  if (n>2) {
+    Gdiplus::GraphicsPath path;
+    Gdiplus::Point *gdi2_p = new Gdiplus::Point[n];
+    for (int i = 0; i < n; i++) {
+      gdi2_p[i] = Gdiplus::Point(p[i].x, p[i].y);
+    }
+    path.AddPolygon(gdi2_p, n);
+    delete[] gdi2_p;
+    path.CloseFigure();
+    graphics_->FillPath(brush_, &path);
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
+  double xt = transform_x(x,y);
+  double yt = transform_y(x,y);
+  double rx = r * (m.c ? sqrt(m.a*m.a+m.c*m.c) : fabs(m.a));
+  double ry = r * (m.b ? sqrt(m.b*m.b+m.d*m.d) : fabs(m.d));
+  int llx = (int)rint(xt-rx);
+  int w = (int)rint(xt+rx)-llx;
+  int lly = (int)rint(yt-ry);
+  int h = (int)rint(yt+ry)-lly;
+
+  if (what==POLYGON) {
+    graphics_->FillPie(brush_, llx, lly, w, h, 0, 360);
+  } else {
+    graphics_->DrawArc(pen_, llx, lly, w, h, 0, 360);
+  }
+}
+
+#else
 
 void Fl_GDI_Graphics_Driver::end_points() {
   for (int i=0; i<n; i++) SetPixel(gc_, p[i].x, p[i].y, fl_RGB());
@@ -99,3 +218,5 @@ void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, d
   } else
     Arc(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
 }
+
+#endif

@@ -30,7 +30,7 @@
 #include <windows.h>
 #include <math.h>  // for ceil()
 
-#if USE_COLORMAP
+#if USE_COLORMAP && !USE_GDIPLUS
 extern HPALETTE fl_select_palette(void); // in fl_color_win32.cxx
 #endif
 
@@ -48,6 +48,9 @@ Fl_WinAPI_Window_Driver::Fl_WinAPI_Window_Driver(Fl_Window *win)
   memset(icon_, 0, sizeof(icon_data));
   cursor = NULL;
   screen_num_ = -1;
+#if USE_GDIPLUS
+  graphics_ = NULL;
+#endif
 }
 
 
@@ -58,6 +61,9 @@ Fl_WinAPI_Window_Driver::~Fl_WinAPI_Window_Driver()
     delete shape_data_;
   }
   delete icon_;
+#if USE_GDIPLUS
+  delete graphics_;
+#endif
 }
 
 int Fl_WinAPI_Window_Driver::screen_num() {
@@ -321,15 +327,26 @@ void Fl_WinAPI_Window_Driver::flush_double()
      and conclude that it's drawing to the display, which is ultimately true
      for an Fl_Double_Window.
      */
+#  if USE_GDIPLUS
+    Gdiplus::Graphics offscreen_graphics((Gdiplus::Bitmap*)other_xid);
+    float s = fl_graphics_driver->scale();
+    offscreen_graphics.ScaleTransform(s, s);
+    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = &offscreen_graphics;
+#  else
     HDC sgc = fl_gc;
     fl_gc = fl_makeDC(other_xid);
     int savedc = SaveDC(fl_gc);
     fl_graphics_driver->gc(fl_gc);
+#  endif
     fl_graphics_driver->restore_clip(); // duplicate clip region into new gc
     draw();
+#  if USE_GDIPLUS
+    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = graphics_;
+#  else
     RestoreDC(fl_gc, savedc);
     DeleteDC(fl_gc);
     fl_graphics_driver->gc(sgc);
+#  endif
 #endif
   }
   int X = 0, Y = 0, W = 0, H = 0;
@@ -418,7 +435,7 @@ void Fl_WinAPI_Window_Driver::free_icons() {
 void Fl_WinAPI_Window_Driver::make_current() {
   fl_GetDC(fl_xid(pWindow));
 
-#if USE_COLORMAP
+#if USE_COLORMAP && !USE_GDIPLUS
   // Windows maintains a hardware and software color palette; the
   // SelectPalette() call updates the current soft->hard mapping
   // for all drawing calls, so we must select it here before any
@@ -426,8 +443,12 @@ void Fl_WinAPI_Window_Driver::make_current() {
   fl_select_palette();
 #endif // USE_COLORMAP
 
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver *dr = (Fl_GDIplus_Graphics_Driver*)fl_graphics_driver;
+  dr->graphics_ = graphics_;
+#endif
   fl_graphics_driver->clip_region(0);
-  ((Fl_GDI_Graphics_Driver*)fl_graphics_driver)->scale(Fl::screen_driver()->scale(screen_num()));
+  fl_graphics_driver->scale(Fl::screen_driver()->scale(screen_num()));
 }
 
 void Fl_WinAPI_Window_Driver::label(const char *name,const char *iname) {

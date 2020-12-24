@@ -32,6 +32,10 @@
 #endif
 
 // Select fonts from the FLTK font table.
+#if USE_GDIPLUS
+#  define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
+  typedef unsigned long PROPID; // necessary for very unclear reason
+#endif
 #include "Fl_GDI_Graphics_Driver.H"
 #include "../../flstring.h"
 #include <FL/Fl.H>
@@ -205,7 +209,9 @@ void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
 }
 
 
+#if !USE_GDIPLUS
 static int fl_angle_ = 0;
+#endif
 
 #ifndef FL_DOXYGEN
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
@@ -221,8 +227,12 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   fid = CreateFont(
     -fsize, // negative makes it use "char size"
     0,              // logical average character width
+#if USE_GDIPLUS
+    0, 0,
+#else
     fl_angle_*10,                   // angle of escapement
     fl_angle_*10,                   // base-line orientation angle
+#endif
     weight,
     italic,
     FALSE,              // underline attribute flag
@@ -234,7 +244,9 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     DEFAULT_PITCH,      // pitch and family
     name                // pointer to typeface name string
     );
+#if !USE_GDIPLUS
   angle = fl_angle_;
+#endif
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (!gc) gc = fl_GetDC(0);
   SelectObject(gc, fid);
@@ -248,6 +260,9 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   for (i = 0; i < 64; i++) glok[i] = 0;
 #endif
   size = fsize;
+#if USE_GDIPLUS
+  gdiplus_font = NULL;
+#endif
 }
 
 Fl_GDI_Font_Descriptor::~Fl_GDI_Font_Descriptor() {
@@ -261,6 +276,9 @@ Fl_GDI_Font_Descriptor::~Fl_GDI_Font_Descriptor() {
   for (int i = 0; i < 64; i++) {
     if ( width[i] ) free(width[i]);
     }
+#if USE_GDIPLUS
+  delete gdiplus_font;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////
@@ -288,12 +306,20 @@ static Fl_Fontdesc built_in_table[] = {
 
 Fl_Fontdesc* fl_fonts = built_in_table;
 
-static Fl_GDI_Font_Descriptor* find(Fl_Font fnum, Fl_Fontsize size, int angle) {
+static Fl_GDI_Font_Descriptor* find(Fl_Font fnum, Fl_Fontsize size
+#if !USE_GDIPLUS
+, int angle
+#endif
+) {
   Fl_Fontdesc* s = fl_fonts+fnum;
   if (!s->name) s = fl_fonts; // use 0 if fnum undefined
   Fl_GDI_Font_Descriptor* f;
   for (f = (Fl_GDI_Font_Descriptor*)s->first; f; f = (Fl_GDI_Font_Descriptor*)f->next)
-    if (f->size == size && f->angle == angle) return f;
+    if (f->size == size 
+#if !USE_GDIPLUS
+    && f->angle == angle
+#endif
+    ) return f;
   f = new Fl_GDI_Font_Descriptor(s->name, size);
   f->next = s->first;
   s->first = f;
@@ -303,35 +329,70 @@ static Fl_GDI_Font_Descriptor* find(Fl_Font fnum, Fl_Fontsize size, int angle) {
 ////////////////////////////////////////////////////////////////
 // Public interface:
 
-static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size, int angle) {
+static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
+#if !USE_GDIPLUS
+, int angle
+#endif
+) {
   if (fnum==-1) { // just make sure that we will load a new font next time
+#if !USE_GDIPLUS
     fl_angle_ = 0;
+#endif
     driver->Fl_Graphics_Driver::font(0, 0);
     return;
   }
-  if (fnum == driver->Fl_Graphics_Driver::font() && size == ((Fl_GDI_Graphics_Driver*)driver)->size_unscaled() && angle == fl_angle_) return;
+#if USE_GDIPLUS
+  if (fnum == driver->Fl_Graphics_Driver::font() && size == driver->size() )
+#else
+  if (fnum == driver->Fl_Graphics_Driver::font() && size == ((Fl_GDI_Graphics_Driver*)driver)->size_unscaled() && angle == fl_angle_)
+#endif
+    return;
+#if !USE_GDIPLUS
   fl_angle_ = angle;
+#endif
   driver->Fl_Graphics_Driver::font(fnum, size);
-  driver->font_descriptor( find(fnum, size, angle) );
+  driver->font_descriptor( find(fnum, size
+#if !USE_GDIPLUS
+  , angle
+#endif
+  ) );
 }
 
+#if USE_GDIPLUS
+void Fl_GDIplus_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize size) {
+  fl_font(this, fnum, size);
+}
+#else
 void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
   fl_font(this, fnum, size, 0);
 }
+#endif
 
+#if USE_GDIPLUS
+int Fl_GDIplus_Graphics_Driver::height() {
+#else
 int Fl_GDI_Graphics_Driver::height_unscaled() {
+#endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return (fl_fontsize->metr.tmAscent + fl_fontsize->metr.tmDescent);
   else return -1;
 }
 
+#if USE_GDIPLUS
+int Fl_GDIplus_Graphics_Driver::descent() {
+#else
 int Fl_GDI_Graphics_Driver::descent_unscaled() {
+#endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return fl_fontsize->metr.tmDescent;
   else return -1;
 }
 
-Fl_Fontsize Fl_GDI_Graphics_Driver::size_unscaled() {
+#if USE_GDIPLUS
+int Fl_GDIplus_Graphics_Driver::size() {
+#else
+int Fl_GDI_Graphics_Driver::size_unscaled() {
+#endif
   if (font_descriptor()) return size_;
   return -1;
 }
@@ -342,7 +403,11 @@ static unsigned short *wstr = NULL;
 static int wstr_len    = 0;
 
 
+#if USE_GDIPLUS
+double Fl_GDIplus_Graphics_Driver::width(const char* c, int n) {
+#else
 double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
+#endif
   int i = 0;
   if (!font_descriptor()) return -1.0;
   double w = 0.0;
@@ -354,13 +419,21 @@ double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
 //  if (l < 1) l = 1;
     i += l;
     if (!fl_nonspacing(ucs)) {
+#if USE_GDIPLUS
+      w += width(ucs);
+#else
       w += width_unscaled(ucs);
+#endif
     }
   }
   return w;
 }
 
+#if USE_GDIPLUS
+double Fl_GDIplus_Graphics_Driver::width(unsigned int c) {
+#else
 double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
+#endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   unsigned int r;
   SIZE s;
@@ -440,6 +513,7 @@ static void GetGlyphIndices_init() {
   have_loaded_GetGlyphIndices = -1; // set this non-zero when we have attempted to load GetGlyphIndicesW
 } // GetGlyphIndices_init function
 
+#if !USE_GDIPLUS
 static void on_printer_extents_update(int &dx, int &dy, int &w, int &h, HDC gc)
 // converts text extents from device coords to logical coords
 {
@@ -456,9 +530,15 @@ static void on_printer_extents_update(int &dx, int &dy, int &w, int &h, HDC gc)
   if (Fl_Surface_Device::surface() != Fl_Display_Device::display_device()) { \
     on_printer_extents_update(x,y,w,h,gc); \
     }
+#endif
 
 // Function to determine the extent of the "inked" area of the glyphs in a string
-void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx, int &dy, int &w, int &h) {
+#if USE_GDIPLUS
+void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int &dy, int &w, int &h)
+#else
+void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx, int &dy, int &w, int &h)
+#endif
+{
 
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (!fl_fontsize) { // no valid font, nothing to measure
@@ -557,18 +637,71 @@ void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx
   h = maxh + miny;
   dx = minx;
   dy = -miny;
+#if !USE_GDIPLUS
   EXTENTS_UPDATE(dx, dy, w, h, gc_);
+#endif
   return; // normal exit
 
 exit_error:
   // some error here - just return fl_measure values
   w = (int)width(c, n);
-  h = height_unscaled();
   dx = 0;
+#if USE_GDIPLUS
+  h = height();
+  dy = descent() - h;
+#else
+  h = height_unscaled();
   dy = descent_unscaled() - h;
   EXTENTS_UPDATE(dx, dy, w, h, gc_);
+#endif
   return;
 } // fl_text_extents
+
+#if USE_GDIPLUS
+
+static Gdiplus::Font* get_gdiplus_font(Fl_GDI_Font_Descriptor *fl_fontsize) {
+  if (!fl_fontsize->gdiplus_font) {
+    const char *fname = (fl_fonts+fl_font())->name+1;
+    wchar_t wname[100];
+    fl_utf8towc(fname, strlen(fname), wname, 100);
+    Gdiplus::FontFamily fontFamily(wname);
+    Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
+    if (fname[-1] == 'B') style = Gdiplus::FontStyleBold;
+    else if (fname[-1] == 'I') style = Gdiplus::FontStyleItalic;
+    else if (fname[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
+    fl_fontsize->gdiplus_font = new Gdiplus::Font(&fontFamily, fl_size(), style, Gdiplus::UnitPixel);
+  }
+  return fl_fontsize->gdiplus_font;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
+  // avoid crash if no font has been set yet
+  if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
+  Gdiplus::PointF pointF(x -4, y-size() +2);
+  int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  if (wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  }
+  Gdiplus::Font *font = get_gdiplus_font((Fl_GDI_Font_Descriptor*)font_descriptor());
+  graphics_->DrawString((WCHAR*)wstr, wn, font, pointF, brush_);
+}
+
+void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
+  Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
+  graphics_->TranslateTransform(x, y);
+  graphics_->RotateTransform(-angle);
+  draw(str, n, 0, 0);
+  graphics_->EndContainer(contain);
+}
+
+void Fl_GDIplus_Graphics_Driver::rtl_draw(const char* c, int n, int x, int y) {
+  int l = width(c, n) + .5;
+  draw(c, n, x-l, y);
+}
+
+#else
 
 void Fl_GDI_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
   COLORREF oldColor = SetTextColor(gc_, fl_RGB());
@@ -631,4 +764,7 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
 #endif
   SetTextColor(gc_, oldColor);
 }
+
+#endif
+
 #endif

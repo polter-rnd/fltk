@@ -41,6 +41,254 @@
 #include <FL/platform.H>
 #include <FL/Fl_Image_Surface.H>
 
+#if USE_GDIPLUS
+
+static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use cb
+                     int W, int H, // width and height
+                     int delta, // offset in buf from one pixel to next pixel (can be <0)
+                     int linedelta, // offset in buf from one line to next one (can be <0)
+                     int depth, // number of channels to use: 1,2,3, or 4
+                     Fl_Draw_Image_Cb cb, // generates one line of source pixels
+                     void* userdata // transmitted to cb
+                     )
+{
+  if (!linedelta) linedelta = W * abs(delta);
+  const uchar *from;
+  uchar *line = NULL;
+  if (cb) {
+    line = new uchar[W * delta]; // delta is > 0
+  }
+  uchar *array = new uchar[W * depth * H];
+  uchar *to = array;
+  for (int i = 0; i < H; i++) {
+    if (!cb) { from = buf + i * linedelta; }
+    else {
+      cb(userdata, 0, i, W, line);
+      from = line;
+    }
+    for (int j = 0; j < W; j++) {
+      memcpy(to, from, depth);
+      to += depth;
+      from += delta;
+    }
+  }
+  Fl_RGB_Image* rgb = new Fl_RGB_Image(array, W, H, depth);
+  rgb->alloc_array = 1;
+  return rgb;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
+  Fl_RGB_Image *rgb;
+  if (d > 0 && l >= 0) {
+    rgb = new Fl_RGB_Image(buf, w, h, d, l);
+  } else {
+    rgb = innards(buf, w, h, d, l, abs(d), NULL, NULL);
+  }
+  cache_rgb_(rgb, true);
+  Gdiplus::Rect rect(x, y, w, h);
+  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(rgb), rect);
+  delete rgb;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_image(Fl_Draw_Image_Cb cb, void* data,
+                   int x, int y, int w, int h, int d) {
+  Fl_RGB_Image *rgb = innards(NULL, w, h, d, 0, d, cb, data);
+  draw_image(rgb->array, x, y, w, h, d, 0);
+  delete rgb;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_image_mono(const uchar* buf, int x, int y, int w, int h, int d, int l) {
+  Fl_RGB_Image *rgb;
+  if (d == 1 && l >= 0) {
+    rgb = new Fl_RGB_Image(buf, w, h, 1, l);
+  } else {
+    rgb = innards(buf, w, h, d, l, 1, NULL, NULL);
+  }
+  draw_image(rgb->array, x, y, w, h, rgb->d(), rgb->ld());
+  delete rgb;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_image_mono(Fl_Draw_Image_Cb cb, void* data,
+                   int x, int y, int w, int h, int d) {
+  Fl_RGB_Image *rgb = innards(NULL, w, h, d, 0, 1, cb, data);
+  rgb->draw(x, y);
+  delete rgb;
+}
+
+void fl_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) {
+  fl_color(r,g,b);
+  fl_rectf(x,y,w,h);
+}
+
+class Fl_GdiPlusBitmap : public Gdiplus::Bitmap {
+  uchar *array_;
+  HBITMAP gdi_bitmap_;
+public:
+  Fl_GdiPlusBitmap(int w, int h, int ld, Gdiplus::PixelFormat fmt, uchar *data) : Gdiplus::Bitmap(w, h, ld, fmt, data) {
+    array_ = data;
+    gdi_bitmap_ = NULL;
+  }
+  Fl_GdiPlusBitmap(HBITMAP hb) : Gdiplus::Bitmap(hb, NULL) {
+    gdi_bitmap_ = hb;
+    array_ = NULL;
+  }
+  virtual ~Fl_GdiPlusBitmap() {
+    delete[] array_;
+    if (gdi_bitmap_) DeleteObject((HGDIOBJ)gdi_bitmap_);
+  }
+};
+
+void Fl_GDIplus_Graphics_Driver::cache_rgb_(Fl_RGB_Image *img, bool skip_alpha)
+{
+  int ld = img->ld() ? img->ld() : img->d() * img->data_w();
+  Gdiplus::PixelFormat fmt;
+  int ld2;
+  if (img->d() == 3 || img->d() == 1) {
+    fmt = PixelFormat24bppRGB;
+    ld2 = ((3*img->data_w()+3)/4)*4; // Gdiplus requires lines of length multiple of 4
+  } else if (img->d() == 4 || img->d() == 2) {
+    fmt = (skip_alpha ? PixelFormat32bppRGB : PixelFormat32bppARGB);
+    ld2 = 4*img->data_w();
+  }
+  uchar *data = new uchar[ld2*img->data_h()];
+  uchar *to = data; const uchar *from = img->array;
+  if (img->d() <= 2) {
+    for (int i = 0; i < img->data_h(); i++) { // convert G(A) to GGG(A) -- G for grey level
+      from = img->array + i*ld;
+      for (int j = 0; j < img->data_w(); j++) {
+        uchar g = *from++;
+        *to++ = g;
+        *to++ = g;
+        *to++ = g;
+        if (img->d() == 2) *to++ = *from++;
+      }
+    }
+  } else {
+    for (int i = 0; i < img->data_h(); i++) { // convert RGB(A) to BGR(A)
+      memcpy(to, from, img->d()*img->data_w());
+      for (uchar* p = to; p < to+img->d()*img->data_w(); p += img->d()) {
+        uchar q = *p; // exchange R and B pixels
+        *p = *(p+2);
+        *(p+2) = q;
+      }
+      to += ld2; from += ld;
+    }
+  }
+  *Fl_Graphics_Driver::id(img) = (fl_uintptr_t)(new Fl_GdiPlusBitmap(img->data_w(), img->data_h(), ld2, fmt, data));
+}
+
+void Fl_GDIplus_Graphics_Driver::cache(Fl_RGB_Image *img) {
+  cache_rgb_(img, false);
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb, int XP, int YP, int WP, int HP, int cx, int cy) {
+  if (Fl_Graphics_Driver::start_image(rgb, XP, YP, WP, HP, cx, cy, XP, YP, WP, HP)) {
+    return;
+  }
+  if (!*Fl_Graphics_Driver::id(rgb)) {
+    cache(rgb);
+  }
+  Gdiplus::Rect rect(XP-cx, YP-cy, rgb->w(), rgb->h());
+  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(rgb), rect);
+}
+
+void Fl_GDIplus_Graphics_Driver::uncache(Fl_RGB_Image*, fl_uintptr_t &id_, fl_uintptr_t &mask_)
+{
+  if (id_) {
+    delete (Fl_GdiPlusBitmap*)id_;
+    id_ = 0;
+  }
+}
+
+void Fl_GDIplus_Graphics_Driver::cache(Fl_Pixmap *img) {
+  Fl_RGB_Image *rgb = new Fl_RGB_Image(img);
+  cache(rgb);
+  *Fl_Graphics_Driver::id(img) = *Fl_Graphics_Driver::id(rgb);
+  *Fl_Graphics_Driver::id(rgb) = 0;
+  delete rgb;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_pixmap(Fl_Pixmap *img, int XP, int YP, int WP, int HP, int cx, int cy) {
+  if (Fl_Graphics_Driver::start_image(img, XP, YP, WP, HP, cx, cy, XP, YP, WP, HP)) {
+    return;
+  }
+  if (!*Fl_Graphics_Driver::id(img)) {
+    cache(img);
+  }
+  Gdiplus::Rect rect(XP-cx, YP-cy, img->w(), img->h());
+  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(img), rect);
+}
+
+void Fl_GDIplus_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
+  delete (Fl_GdiPlusBitmap*)p;
+}
+
+
+// 'gdi_create_bitmap()' - Create a 1-bit bitmap for drawing...
+static Fl_GdiPlusBitmap* gdi_create_bitmap(int w, int h, const uchar *data) {
+  // we need to pad the lines out to words & swap the bits
+  // in each byte.
+  int w1 = (w + 7) / 8;
+  int w2 = ((w + 15) / 16) * 2;
+  uchar* newarray = new uchar[w2*h];
+  const uchar* src = data;
+  uchar* dest = newarray;
+  HBITMAP bm;
+  static uchar reverse[16] =    /* Bit reversal lookup table */
+  { 0x00, 0x88, 0x44, 0xcc, 0x22, 0xaa, 0x66, 0xee,
+    0x11, 0x99, 0x55, 0xdd, 0x33, 0xbb, 0x77, 0xff };
+
+  for (int y = 0; y < h; y++) {
+    for (int n = 0; n < w1; n++, src++)
+      *dest++ = (uchar)((reverse[*src & 0x0f] & 0xf0) |
+                        (reverse[(*src >> 4) & 0x0f] & 0x0f));
+    dest += w2 - w1;
+  }
+
+  bm = CreateBitmap(w, h, 1, 1, newarray);
+  Fl_GdiPlusBitmap* gdiplus_bm = new Fl_GdiPlusBitmap(bm);
+  delete[] newarray;
+  return gdiplus_bm;
+}
+
+void Fl_GDIplus_Graphics_Driver::cache(Fl_Bitmap *bm) {
+  int *pw, *ph;
+  cache_w_h(bm, pw, ph);
+  *pw = bm->data_w();
+  *ph = bm->data_h();
+  Fl_GdiPlusBitmap* gdiplus_bm = gdi_create_bitmap(bm->data_w(), bm->data_h(), bm->array);
+  *Fl_Graphics_Driver::id(bm) = (fl_uintptr_t)gdiplus_bm;
+}
+
+void Fl_GDIplus_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm, int XP, int YP, int WP, int HP, int cx, int cy) {
+  if (Fl_Graphics_Driver::start_image(bm, XP, YP, WP, HP, cx, cy, XP, YP, WP, HP)) {
+    return;
+  }
+  if (!*Fl_Graphics_Driver::id(bm)) {
+    cache(bm);
+  }
+  static Gdiplus::ColorPalette *palette = NULL;
+  if (!palette) {
+    palette = (Gdiplus::ColorPalette*)new char[sizeof(Gdiplus::ColorPalette) + sizeof(Gdiplus::ARGB)];
+    palette->Flags = 0;
+    palette->Count = 2;
+    palette->Entries[0] = 0; // the transparent color
+  }
+  Gdiplus::Color c;
+  pen_->GetColor(&c);
+  palette->Entries[1] = c.GetValue(); // the foreground color
+  Fl_GdiPlusBitmap* gdi_bm = (Fl_GdiPlusBitmap*)*Fl_Graphics_Driver::id(bm);
+  gdi_bm->SetPalette(palette);
+  Gdiplus::Rect rect(XP-cx, YP-cy, bm->w(), bm->h());
+  graphics_->DrawImage(gdi_bm, rect);
+}
+
+void Fl_GDIplus_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
+    delete bm;
+}
+
+#else
+
 #define MAXBUFFER 0x40000 // 256k
 
 void fl_release_dc(HWND, HDC); // from Fl_win32.cxx
@@ -751,3 +999,5 @@ void Fl_GDI_Graphics_Driver::cache(Fl_Pixmap *img) {
 void Fl_GDI_Graphics_Driver::uncache_pixmap(fl_uintptr_t offscreen) {
   DeleteObject((Fl_Offscreen)offscreen);
 }
+
+#endif

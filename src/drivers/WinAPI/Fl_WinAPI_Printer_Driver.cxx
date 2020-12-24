@@ -34,7 +34,15 @@ private:
   int           prerr;
   int left_margin;
   int top_margin;
-  void absolute_printable_rect(int *x, int *y, int *w, int *h);
+#if USE_GDIPLUS
+  int printable_width, printable_height;
+  Gdiplus::GraphicsState initial_state;
+  float scale_x_, scale_y_;
+  float
+#else
+  void
+#endif
+      absolute_printable_rect(int *x, int *y, int *w, int *h);
   Fl_WinAPI_Printer_Driver(void);
   int begin_job(int pagecount = 0, int *frompage = NULL, int *topage = NULL, char **perr_message = NULL);
   int begin_page (void);
@@ -53,7 +61,12 @@ private:
 
 Fl_WinAPI_Printer_Driver::Fl_WinAPI_Printer_Driver(void) : Fl_Paged_Device() {
   hPr = NULL;
+#if USE_GDIPLUS
+  scale_x_ = scale_y_ = 1;
+  driver(new Fl_GDIplus_Graphics_Driver);
+#else
   driver(new Fl_GDI_Printer_Graphics_Driver);
+#endif
 }
 
 Fl_Paged_Device* Fl_Printer::newPrinterDriver(void)
@@ -153,6 +166,9 @@ int Fl_WinAPI_Printer_Driver::begin_job (int pagecount, int *frompage, int *topa
     WIN_SetupPrinterDeviceContext (hPr);
     driver()->gc(hPr);
     this->set_current();
+#if USE_GDIPLUS
+    left_margin = top_margin = printable_height = printable_width = 0;
+#endif
   }
   return err;
 }
@@ -178,21 +194,41 @@ void Fl_WinAPI_Printer_Driver::end_job (void)
   hPr = NULL;
 }
 
-void Fl_WinAPI_Printer_Driver::absolute_printable_rect(int *x, int *y, int *w, int *h)
+#if USE_GDIPLUS
+float
+#else
+void
+#endif
+    Fl_WinAPI_Printer_Driver::absolute_printable_rect(int *x, int *y, int *w, int *h)
 {
   POINT         physPageSize;
   POINT         pixelsPerInch;
-  XFORM         transform;
+#if USE_GDIPLUS
+  float f = 1;
 
+  if (hPr == NULL) return f;
+  if (printable_width) {
+    *x = left_margin; *y = top_margin; *w = printable_width; *h = printable_height;
+    return f;
+  }
+#else
+  XFORM         transform;
+  
   if (hPr == NULL) return;
   HDC gc = (HDC)driver()->gc();
   GetWorldTransform(gc, &transform);
   ModifyWorldTransform(gc, NULL, MWT_IDENTITY);
   SetWindowOrgEx(gc, 0, 0, NULL);
-
+#endif
   physPageSize.x = GetDeviceCaps(hPr, HORZRES);
   physPageSize.y = GetDeviceCaps(hPr, VERTRES);
+#if USE_GDIPLUS
+  f = physPageSize.y;
+#endif
   DPtoLP(hPr, &physPageSize, 1);
+#if USE_GDIPLUS
+  f /= physPageSize.y;
+#endif
   *w = physPageSize.x + 1;
   *h = physPageSize.y + 1;
   pixelsPerInch.x = GetDeviceCaps(hPr, LOGPIXELSX);
@@ -202,27 +238,43 @@ void Fl_WinAPI_Printer_Driver::absolute_printable_rect(int *x, int *y, int *w, i
   *w -= (pixelsPerInch.x / 2);
   top_margin = (pixelsPerInch.y / 4);
   *h -= (pixelsPerInch.y / 2);
-
+#if USE_GDIPLUS
+  printable_width = *w; printable_height = *h;
+#endif
   *x = left_margin;
   *y = top_margin;
+#if USE_GDIPLUS
+  return f;
+#else
   origin(x_offset, y_offset);
   SetWorldTransform(gc, &transform);
+#endif
 }
 
 void Fl_WinAPI_Printer_Driver::margins(int *left, int *top, int *right, int *bottom)
 {
   int x = 0, y = 0, w = 0, h = 0;
   absolute_printable_rect(&x, &y, &w, &h);
+#if USE_GDIPLUS
+  if (left) *left = x / scale_x_;
+  if (top) *top = y / scale_y_;
+  if (right) *right = x / scale_x_;
+  if (bottom) *bottom = y / scale_y_;
+#else
   if (left) *left = x;
   if (top) *top = y;
   if (right) *right = x;
   if (bottom) *bottom = y;
+#endif
 }
 
 int Fl_WinAPI_Printer_Driver::printable_rect(int *w, int *h)
 {
   int x, y;
   absolute_printable_rect(&x, &y, w, h);
+#if USE_GDIPLUS
+  *w /= scale_x_; *h /= scale_y_;
+#endif
   return 0;
 }
 
@@ -238,16 +290,36 @@ int Fl_WinAPI_Printer_Driver::begin_page (void)
       fl_alert ("StartPage error %d", prerr);
       rsult = 1;
     }
+#if USE_GDIPLUS
+    int x, y;
+    float f = absolute_printable_rect(&x, &y, &w, &h);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = new Gdiplus::Graphics(hPr);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(f/50, f/50);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->TranslateTransform(left_margin, top_margin);
+    initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
+#else
     printable_rect(&w, &h);
     origin(0, 0);
+#endif
     fl_clip_region(0);
+fl_graphics_driver->color(FL_RED); //TMP
+fl_graphics_driver->line_style(0,2);
+fl_graphics_driver->rect(0,0,w,h);
+fl_graphics_driver->line_style(0,0);
   }
   return rsult;
 }
 
 void Fl_WinAPI_Printer_Driver::origin (int deltax, int deltay)
 {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Restore(initial_state);
+  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(scale_x_, scale_y_);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->TranslateTransform(deltax, deltay);
+#else
   SetWindowOrgEx( (HDC)driver()->gc(), - left_margin - deltax, - top_margin - deltay, NULL);
+#endif
   x_offset = deltax;
   y_offset = deltay;
 }
@@ -255,14 +327,24 @@ void Fl_WinAPI_Printer_Driver::origin (int deltax, int deltay)
 void Fl_WinAPI_Printer_Driver::scale (float scalex, float scaley)
 {
   if (scaley == 0.) scaley = scalex;
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Restore(initial_state);
+  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(scalex, scaley);
+  scale_x_ = scalex; scale_y_ = scaley;
+#else
   int w, h;
   SetWindowExtEx((HDC)driver()->gc(), (int)(720 / scalex + 0.5), (int)(720 / scaley + 0.5), NULL);
   printable_rect(&w, &h);
   origin(0, 0);
+#endif
 }
 
 void Fl_WinAPI_Printer_Driver::rotate (float rot_angle)
 {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->RotateTransform(-rot_angle);
+#else
   XFORM mat;
   float angle;
   angle = (float) - (rot_angle * M_PI / 180.);
@@ -272,6 +354,7 @@ void Fl_WinAPI_Printer_Driver::rotate (float rot_angle)
   mat.eM22 = mat.eM11;
   mat.eDx = mat.eDy = 0;
   SetWorldTransform((HDC)driver()->gc(), &mat);
+#endif
 }
 
 int Fl_WinAPI_Printer_Driver::end_page (void)
@@ -280,6 +363,9 @@ int Fl_WinAPI_Printer_Driver::end_page (void)
 
   rsult = 0;
   if (hPr != NULL) {
+#if USE_GDIPLUS
+    delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_;
+#endif
     prerr = EndPage (hPr);
     if (prerr < 0) {
       abortPrint = TRUE;
@@ -293,6 +379,7 @@ int Fl_WinAPI_Printer_Driver::end_page (void)
   return rsult;
 }
 
+#if !USE_GDIPLUS
 static int translate_stack_depth = 0;
 const int translate_stack_max = 5;
 static int translate_stack_x[translate_stack_max];
@@ -307,23 +394,32 @@ static void do_translate(int x, int y, HDC gc)
   tr.eDy =  (FLOAT) y;
   ModifyWorldTransform(gc, &tr, MWT_LEFTMULTIPLY);
 }
+#endif
 
 void Fl_WinAPI_Printer_Driver::translate (int x, int y)
 {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->translate_all(x, y);
+#else
   do_translate(x, y, (HDC)driver()->gc());
   if (translate_stack_depth < translate_stack_max) {
     translate_stack_x[translate_stack_depth] = x;
     translate_stack_y[translate_stack_depth] = y;
     translate_stack_depth++;
     }
+#endif
 }
 
 void Fl_WinAPI_Printer_Driver::untranslate (void)
 {
+#if USE_GDIPLUS
+  ((Fl_GDIplus_Graphics_Driver*)driver())->untranslate_all();
+#else
   if (translate_stack_depth > 0) {
     translate_stack_depth--;
     do_translate( - translate_stack_x[translate_stack_depth], - translate_stack_y[translate_stack_depth], (HDC)driver()->gc() );
     }
+#endif
 }
 
 void Fl_WinAPI_Printer_Driver::origin(int *x, int *y)

@@ -27,6 +27,8 @@
 
 #include "Fl_GDI_Graphics_Driver.H"
 
+#if !USE_GDIPLUS
+
 #include <FL/math.h>
 #include <FL/platform.H>
 
@@ -58,3 +60,5 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(float x, float y, float w, float h, do
     } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
   } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
 }
+
+#endif
