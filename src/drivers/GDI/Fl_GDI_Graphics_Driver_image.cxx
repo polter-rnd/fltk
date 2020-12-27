@@ -77,6 +77,13 @@ static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use 
   return rgb;
 }
 
+static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, double s, Gdiplus::Graphics *g) {
+  int X = int(x*s), Y = int(y*s);
+  w = int((x+w)*s) - X, h = int((y+h)*s) - Y;
+  Gdiplus::RectF rect(X/s, Y/s, w/s+0.9, h/s+0.9);
+  g->DrawImage(gdi_img, rect);
+}
+
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
   Fl_RGB_Image *rgb;
   if (d > 0 && l >= 0) {
@@ -85,8 +92,7 @@ void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int 
     rgb = innards(buf, w, h, d, l, abs(d), NULL, NULL);
   }
   cache_rgb_(rgb, true);
-  Gdiplus::Rect rect(x, y, w, h);
-  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(rgb), rect);
+  draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(rgb), x, y, w, h, scale(), graphics_);
   delete rgb;
 }
 
@@ -188,8 +194,7 @@ void Fl_GDIplus_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(rgb)) {
     cache(rgb);
   }
-  Gdiplus::Rect rect(XP-cx, YP-cy, rgb->w(), rgb->h());
-  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(rgb), rect);
+  draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(rgb), XP-cx, YP-cy, rgb->w(), rgb->h(), scale(), graphics_);
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache(Fl_RGB_Image*, fl_uintptr_t &id_, fl_uintptr_t &mask_)
@@ -215,8 +220,7 @@ void Fl_GDIplus_Graphics_Driver::draw_pixmap(Fl_Pixmap *img, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(img)) {
     cache(img);
   }
-  Gdiplus::Rect rect(XP-cx, YP-cy, img->w(), img->h());
-  graphics_->DrawImage((Gdiplus::Image*)*Fl_Graphics_Driver::id(img), rect);
+  draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(img), XP-cx, YP-cy, img->w(), img->h(), scale(), graphics_);
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
@@ -279,8 +283,7 @@ void Fl_GDIplus_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm, int XP, int YP, int 
   palette->Entries[1] = c.GetValue(); // the foreground color
   Fl_GdiPlusBitmap* gdi_bm = (Fl_GdiPlusBitmap*)*Fl_Graphics_Driver::id(bm);
   gdi_bm->SetPalette(palette);
-  Gdiplus::Rect rect(XP-cx, YP-cy, bm->w(), bm->h());
-  graphics_->DrawImage(gdi_bm, rect);
+  draw_scaled_gdi_img(gdi_bm, XP-cx, YP-cy, bm->w(), bm->h(), scale(), graphics_);
 }
 
 void Fl_GDIplus_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
