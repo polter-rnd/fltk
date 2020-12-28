@@ -121,6 +121,16 @@ enumcbw(CONST LOGFONTW    *lpelf,
   return 1;
 } /* enumcbw */
 
+extern "C" {
+  typedef int (*compare_func_t)(const void *, const void *);
+}
+
+static int sort_fonts_by_name(Fl_Fontdesc *fd1, Fl_Fontdesc *fd2) {
+  int retval = strcmp(fd1->name + 1, fd2->name + 1);
+  if (retval) return retval;
+  return *(fd1->name) - *(fd2->name);
+}
+
 Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (fl_free_font == FL_FREE_FONT) {// if not already been called
@@ -129,6 +139,7 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
     EnumFontFamiliesW(gc, NULL, (FONTENUMPROCW)enumcbw, xstarname != 0);
 
   }
+  qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
   return (Fl_Font)fl_free_font;
 }
 
