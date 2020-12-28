@@ -685,7 +685,15 @@ exit_error:
 
 static Gdiplus::Font* get_gdiplus_font(Fl_GDI_Font_Descriptor *fl_fontsize) {
   if (!fl_fontsize->gdiplus_font) {
-    fl_fontsize->gdiplus_font = new Gdiplus::Font((HDC)fl_graphics_driver->gc());
+    const char *fname = (fl_fonts+fl_font())->name+1;
+    wchar_t wname[100];
+    fl_utf8towc(fname, strlen(fname), wname, 100);
+    Gdiplus::FontFamily fontFamily(wname);
+    Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
+    if (fname[-1] == 'B') style = Gdiplus::FontStyleBold;
+    else if (fname[-1] == 'I') style = Gdiplus::FontStyleItalic;
+    else if (fname[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
+    fl_fontsize->gdiplus_font = new Gdiplus::Font(&fontFamily, fl_size(), style, Gdiplus::UnitPixel);
   }
   return fl_fontsize->gdiplus_font;
 }
