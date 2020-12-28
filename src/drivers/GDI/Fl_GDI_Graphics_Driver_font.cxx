@@ -103,6 +103,14 @@ enumcbw(CONST LOGFONTW    *lpelf,
     if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n);return 1;}
   char buffer[LF_FACESIZE + 1];
   strcpy(buffer+1, n);
+#if USE_GDIPLUS // skip fonts that can't be used with GDI+
+  buffer[0] = ' ';
+  Fl_GDI_Font_Descriptor *fd = new Fl_GDI_Font_Descriptor(buffer, 14);
+  fd->gdiplus_font = new Gdiplus::Font((HDC)fl_graphics_driver->gc());
+  Gdiplus::Status status = fd->gdiplus_font->GetLastStatus();
+  delete fd;
+  if (status != Gdiplus::Ok) {return 1;}
+#endif
   buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
   if (lpelf->lfWeight <= 400)
     buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
@@ -299,8 +307,13 @@ static Fl_Fontdesc built_in_table[] = {
 {"ITimes New Roman"},
 {"PTimes New Roman"},
 {" Symbol"},
+#if USE_GDIPLUS
+  {" Georgia"},
+  {"BGeorgia"},
+#else
 {" Terminal"},
 {"BTerminal"},
+#endif
 {" Wingdings"},
 };
 
@@ -661,15 +674,7 @@ exit_error:
 
 static Gdiplus::Font* get_gdiplus_font(Fl_GDI_Font_Descriptor *fl_fontsize) {
   if (!fl_fontsize->gdiplus_font) {
-    const char *fname = (fl_fonts+fl_font())->name+1;
-    wchar_t wname[100];
-    fl_utf8towc(fname, strlen(fname), wname, 100);
-    Gdiplus::FontFamily fontFamily(wname);
-    Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
-    if (fname[-1] == 'B') style = Gdiplus::FontStyleBold;
-    else if (fname[-1] == 'I') style = Gdiplus::FontStyleItalic;
-    else if (fname[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
-    fl_fontsize->gdiplus_font = new Gdiplus::Font(&fontFamily, fl_size(), style, Gdiplus::UnitPixel);
+    fl_fontsize->gdiplus_font = new Gdiplus::Font((HDC)fl_graphics_driver->gc());
   }
   return fl_fontsize->gdiplus_font;
 }

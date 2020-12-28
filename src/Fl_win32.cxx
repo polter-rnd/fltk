@@ -1644,8 +1644,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
           delete Fl_WinAPI_Window_Driver::driver(window)->graphics_;
           Fl_WinAPI_Window_Driver::driver(window)->graphics_ = new Gdiplus::Graphics(fl_xid(window));
           Fl_WinAPI_Window_Driver::driver(window)->graphics_->ScaleTransform(scale, scale);
-          //essai
-          Fl_WinAPI_Window_Driver::driver(window)->graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintSingleBitPerPixelGridFit);
         }
 #endif
         break;
