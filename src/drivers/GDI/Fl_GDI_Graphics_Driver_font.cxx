@@ -450,6 +450,10 @@ double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
 #endif
     }
   }
+#if USE_GDIPLUS
+  //should find something better
+  if (font() >= FL_COURIER && font() <= FL_COURIER_BOLD_ITALIC) w *= 1.085;
+#endif
   return w;
 }
 
@@ -701,7 +705,7 @@ static Gdiplus::Font* get_gdiplus_font(Fl_GDI_Font_Descriptor *fl_fontsize) {
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   // avoid crash if no font has been set yet
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
-  Gdiplus::PointF pointF(x -4, y-size() +2);
+  Gdiplus::PointF pointF(x -3.*size()/14., y-size() +2);
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   if (wn >= wstr_len) {
     wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
