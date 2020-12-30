@@ -34,7 +34,7 @@
 // Select fonts from the FLTK font table.
 #if USE_GDIPLUS
 #  define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
-  typedef unsigned long PROPID; // necessary for very unclear reason
+#  include <wtypes.h> // may be necessary to include gdiplus.h later
 #endif
 #include "Fl_GDI_Graphics_Driver.H"
 #include "../../flstring.h"
