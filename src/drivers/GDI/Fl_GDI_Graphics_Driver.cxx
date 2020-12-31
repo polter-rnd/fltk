@@ -88,6 +88,7 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
 }
 
 static ULONG_PTR gdiplusToken;
+Gdiplus::StringFormat *Fl_GDIplus_Graphics_Driver::format = NULL;
 
 /*
  * By linking this module, the following static method will instantiate the
@@ -99,7 +100,10 @@ Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
   static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
   if (gdiplusToken == 0) GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
   
-  return new Fl_GDIplus_Graphics_Driver();
+  Fl_Graphics_Driver *driver = new Fl_GDIplus_Graphics_Driver();
+  Fl_GDIplus_Graphics_Driver::format = (Gdiplus::StringFormat *)Gdiplus::StringFormat::GenericTypographic();
+  Fl_GDIplus_Graphics_Driver::format->SetFormatFlags(Gdiplus::StringFormatFlagsMeasureTrailingSpaces);
+  return driver;
 }
 
 void Fl_GDIplus_Graphics_Driver::shutdown() {
