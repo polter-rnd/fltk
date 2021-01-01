@@ -33,6 +33,7 @@ public:
   TEXTMETRIC metr;
 #if USE_GDIPLUS
   double *width[64];
+  double descent, linespacing;
   Gdiplus::Font *gdiplus_font;
 #else
   int *width[64];

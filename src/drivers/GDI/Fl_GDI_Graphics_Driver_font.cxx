@@ -46,6 +46,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <FL/fl_string.h>
+//FILE*LOG=fopen("log.log","w");
 
 // This function fills in the FLTK font table with all the fonts that
 // are found on the X server.  It tries to place the fonts into families
@@ -106,7 +107,6 @@ enumcbw(CONST LOGFONTW    *lpelf,
 #if USE_GDIPLUS // skip fonts that can't be used with GDI+
   buffer[0] = ' ';
   Fl_GDI_Font_Descriptor *fd = new Fl_GDI_Font_Descriptor(buffer, 14);
-  fd->gdiplus_font = new Gdiplus::Font((HDC)fl_graphics_driver->gc());
   Gdiplus::Status status = fd->gdiplus_font->GetLastStatus();
   delete fd;
   if (status != Gdiplus::Ok) {return 1;}
@@ -280,7 +280,19 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
 #endif
   size = fsize;
 #if USE_GDIPLUS
-  gdiplus_font = NULL;
+  if (fsize > 0) {
+    wchar_t wname[100];
+    fl_utf8towc(name, strlen(name), wname, 100);
+    Gdiplus::FontFamily fontFamily(wname);
+    Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
+    if (name[-1] == 'B') style = Gdiplus::FontStyleBold;
+    else if (name[-1] == 'I') style = Gdiplus::FontStyleItalic;
+    else if (name[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
+    gdiplus_font = new Gdiplus::Font(&fontFamily, fsize, style, Gdiplus::UnitPixel);
+    descent = double(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
+    linespacing = double(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
+//fprintf(LOG,"stat=%d [%s] %d desc=%.2f LS=%.2f\n", gdiplus_font->GetLastStatus(), name-1, fsize, descent, linespacing);
+  } else gdiplus_font = NULL;
 #endif
 }
 
@@ -404,13 +416,17 @@ int Fl_GDI_Graphics_Driver::height_unscaled() {
 
 #if USE_GDIPLUS
 int Fl_GDIplus_Graphics_Driver::descent() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize && fl_fontsize->gdiplus_font) return int(fl_fontsize->descent + 0.5);
+  else return -1;
+}
 #else
 int Fl_GDI_Graphics_Driver::descent_unscaled() {
-#endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return fl_fontsize->metr.tmDescent;
   else return -1;
 }
+#endif
 
 #if USE_GDIPLUS
 int Fl_GDIplus_Graphics_Driver::size() {
@@ -454,23 +470,8 @@ double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
 }
 
 #if USE_GDIPLUS
-  static Gdiplus::Font* get_gdiplus_font(Fl_GDI_Font_Descriptor *fl_fontsize) {
-    if (!fl_fontsize->gdiplus_font) {
-      const char *fname = (fl_fonts+fl_font())->name+1;
-      wchar_t wname[100];
-      fl_utf8towc(fname, strlen(fname), wname, 100);
-      Gdiplus::FontFamily fontFamily(wname);
-      Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
-      if (fname[-1] == 'B') style = Gdiplus::FontStyleBold;
-      else if (fname[-1] == 'I') style = Gdiplus::FontStyleItalic;
-      else if (fname[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
-      fl_fontsize->gdiplus_font = new Gdiplus::Font(&fontFamily, fl_size(), style, Gdiplus::UnitPixel);
-    }
-    return fl_fontsize->gdiplus_font;
-  }
-  
   double Fl_GDIplus_Graphics_Driver::width(const WCHAR *txt, int l) {
-    Gdiplus::Font *gdfont = get_gdiplus_font((Fl_GDI_Font_Descriptor*)font_descriptor());
+    Gdiplus::Font *gdfont = ((Fl_GDI_Font_Descriptor*)font_descriptor())->gdiplus_font;
     Gdiplus::PointF pointF(0, 0);
     Gdiplus::RectF rect;
     static Gdiplus::Graphics gscreen(fl_GetDC(0));
@@ -729,15 +730,15 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   // avoid crash if no font has been set yet
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
 //double l = width(str, n);//DEBUG
-  Gdiplus::PointF pointF(x -2*size()/14., y-size() +2);
+  Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  Gdiplus::PointF pointF(x -2*size()/14., y - fd->linespacing + fd->descent);
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   if (wn >= wstr_len) {
     wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  Gdiplus::Font *font = get_gdiplus_font((Fl_GDI_Font_Descriptor*)font_descriptor());
-  graphics_->DrawString((WCHAR*)wstr, wn, font, pointF, brush_);
+  graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, brush_);
 //xyline(x,y,int(x+l));//DEBUG
 }
 
