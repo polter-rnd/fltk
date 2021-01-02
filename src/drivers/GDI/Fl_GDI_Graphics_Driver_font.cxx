@@ -178,8 +178,10 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
 
 
 static int nbSize;
-static int cyPerInch;
 static int sizes[128];
+#if !USE_GDIPLUS
+static int cyPerInch;
+
 static int CALLBACK
 
 EnumSizeCbW(CONST LOGFONTW    * /*lpelf*/,
@@ -214,9 +216,13 @@ EnumSizeCbW(CONST LOGFONTW    * /*lpelf*/,
   // Stop enum if buffer overflow
   return nbSize < 128;
 }
-
+#endif
 
 int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
+#if USE_GDIPLUS
+  sizes[0] = 0;
+  nbSize = 1;
+#else
   nbSize = 0;
   Fl_Fontdesc *s = fl_fonts+fnum;
   if (!s->name) s = fl_fonts; // empty slot in table, use entry 0
@@ -237,7 +243,7 @@ int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
   b[l] = 0;
   EnumFontFamiliesW(gc, (WCHAR*)b, (FONTENUMPROCW)EnumSizeCbW, 0);
   free(b);
-
+#endif
   sizep = sizes;
   return nbSize;
 }
