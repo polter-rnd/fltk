@@ -30,12 +30,12 @@ namespace Gdiplus { class Font; }
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {
 public:
   HFONT fid;
-  TEXTMETRIC metr;
 #if USE_GDIPLUS
   double *width[64];
   double descent, linespacing;
   Gdiplus::Font *gdiplus_font;
 #else
+  TEXTMETRIC metr;
   int *width[64];
   int angle;
 #endif

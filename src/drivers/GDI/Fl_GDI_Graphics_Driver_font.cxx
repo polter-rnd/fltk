@@ -14,6 +14,11 @@
 //     https://www.fltk.org/bugs.php
 //
 
+#if USE_GDIPLUS
+#  define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
+
+#else
+
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
 #endif
@@ -31,11 +36,8 @@
 # define _WIN32_WINNT 0x0500
 #endif
 
-// Select fonts from the FLTK font table.
-#if USE_GDIPLUS
-#  define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
-#  include <wtypes.h> // may be necessary to include gdiplus.h later
-#endif
+#endif // USE_GDIPLUS
+
 #include "Fl_GDI_Graphics_Driver.H"
 #include "../../flstring.h"
 #include <FL/Fl.H>
@@ -204,7 +206,7 @@ int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
   sizep = sizes;
   return nbSize;
 }
-#endif
+#endif // !USE_GDIPLUS
 
 const char *Fl_GDI_Graphics_Driver::font_name(int num) {
   return fl_fonts[num].name;
@@ -224,60 +226,11 @@ void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
   s->first = 0;
 }
 
-static HFONT create_gdi_font(const char *name, Fl_Fontsize fsize) {
-  int weight = FW_NORMAL;
-  int italic = 0;
-  switch (*name++) {
-  case 'I': italic = 1; break;
-  case 'P': italic = 1;
-  case 'B': weight = FW_BOLD; break;
-  case ' ': break;
-  default: name--;
-  }
-  return CreateFont(
-    -fsize, // negative makes it use "char size"
-    0,              // logical average character width
-#if USE_GDIPLUS
-    0, 0,
-#else
-    fl_angle_*10,                   // angle of escapement
-    fl_angle_*10,                   // base-line orientation angle
-#endif
-    weight,
-    italic,
-    FALSE,              // underline attribute flag
-    FALSE,              // strikeout attribute flag
-    DEFAULT_CHARSET,    // character set identifier
-    OUT_DEFAULT_PRECIS, // output precision
-    CLIP_DEFAULT_PRECIS,// clipping precision
-    DEFAULT_QUALITY,    // output quality
-    DEFAULT_PITCH,      // pitch and family
-    name                // pointer to typeface name string
-    );
-}
-
 #ifndef FL_DOXYGEN
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
-#if USE_GDIPLUS
-  fid = NULL;
-#else
-  fid = create_gdi_font(name, fsize);
-  angle = fl_angle_;
-  HDC gc = (HDC)fl_graphics_driver->gc();
-  if (!gc) gc = fl_GetDC(0);
-  SelectObject(gc, fid);
-  GetTextMetrics(gc, &metr);
-#endif
-//  BOOL ret = GetCharWidthFloat(fl_gc, metr.tmFirstChar, metr.tmLastChar, font->width+metr.tmFirstChar);
-// ...would be the right call, but is not implemented into Window95! (WinNT?)
-  //GetCharWidth(fl_gc, 0, 255, width);
-  int i;
-  memset(width, 0, 64 * sizeof(int*));
-#if HAVE_GL
-  for (i = 0; i < 64; i++) glok[i] = 0;
-#endif
   size = fsize;
 #if USE_GDIPLUS
+  fid = NULL;
   if (fsize > 0) {
     name++;
     wchar_t wname[100];
@@ -292,6 +245,46 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     linespacing = double(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
 //fprintf(LOG,"stat=%d [%s] %d desc=%.2f LS=%.2f\n", gdiplus_font->GetLastStatus(), name-1, fsize, descent, linespacing);
   } else gdiplus_font = NULL;
+#else
+  int weight = FW_NORMAL;
+  int italic = 0;
+  switch (*name++) {
+  case 'I': italic = 1; break;
+  case 'P': italic = 1;
+  case 'B': weight = FW_BOLD; break;
+  case ' ': break;
+  default: name--;
+  }
+  fid = CreateFont(
+    -fsize, // negative makes it use "char size"
+    0,              // logical average character width
+    fl_angle_*10,                   // angle of escapement
+    fl_angle_*10,                   // base-line orientation angle
+    weight,
+    italic,
+    FALSE,              // underline attribute flag
+    FALSE,              // strikeout attribute flag
+    DEFAULT_CHARSET,    // character set identifier
+    OUT_DEFAULT_PRECIS, // output precision
+    CLIP_DEFAULT_PRECIS,// clipping precision
+    DEFAULT_QUALITY,    // output quality
+    DEFAULT_PITCH,      // pitch and family
+    name                // pointer to typeface name string
+    );
+
+  angle = fl_angle_;
+  HDC gc = (HDC)fl_graphics_driver->gc();
+  if (!gc) gc = fl_GetDC(0);
+  SelectObject(gc, fid);
+  GetTextMetrics(gc, &metr);
+#endif
+//  BOOL ret = GetCharWidthFloat(fl_gc, metr.tmFirstChar, metr.tmLastChar, font->width+metr.tmFirstChar);
+// ...would be the right call, but is not implemented into Window95! (WinNT?)
+  //GetCharWidth(fl_gc, 0, 255, width);
+  int i;
+  memset(width, 0, 64 * sizeof(int*));
+#if HAVE_GL
+  for (i = 0; i < 64; i++) glok[i] = 0;
 #endif
 }
 
@@ -526,6 +519,8 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
   return (double) fl_fontsize->width[r][c & 0x03FF];
 }
 
+#if !USE_GDIPLUS
+
 /* Add function pointer to allow us to access GetGlyphIndicesW on systems that have it,
  * without crashing on systems that do not. */
 /* DWORD WINAPI GetGlyphIndicesW(HDC,LPCWSTR,int,LPWORD,DWORD) */
@@ -546,7 +541,6 @@ static void GetGlyphIndices_init() {
   have_loaded_GetGlyphIndices = -1; // set this non-zero when we have attempted to load GetGlyphIndicesW
 } // GetGlyphIndices_init function
 
-#if !USE_GDIPLUS
 static void on_printer_extents_update(int &dx, int &dy, int &w, int &h, HDC gc)
 // converts text extents from device coords to logical coords
 {
@@ -563,14 +557,9 @@ static void on_printer_extents_update(int &dx, int &dy, int &w, int &h, HDC gc)
   if (Fl_Surface_Device::surface() != Fl_Display_Device::display_device()) { \
     on_printer_extents_update(x,y,w,h,gc); \
     }
-#endif
 
 // Function to determine the extent of the "inked" area of the glyphs in a string
-#if USE_GDIPLUS
-void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int &dy, int &w, int &h)
-#else
 void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx, int &dy, int &w, int &h)
-#endif
 {
 
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
@@ -618,9 +607,6 @@ void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx
     w_buff = new WORD[wc_len];
     len = fl_utf8toUtf16(c, n, ext_buff, wc_len);
   }
-#if USE_GDIPLUS
-  if (!fl_fontsize->fid) fl_fontsize->fid = create_gdi_font(fl_fonts[font()].name, size());
-#endif
   SelectObject(gc2, fl_fontsize->fid);
 
   // Are there surrogate-pairs in this string? If so GetGlyphIndicesW will fail
@@ -673,27 +659,20 @@ void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx
   h = maxh + miny;
   dx = minx;
   dy = -miny;
-#if USE_GDIPLUS
-  dx++;
-#else
   EXTENTS_UPDATE(dx, dy, w, h, gc_);
-#endif
   return; // normal exit
 
 exit_error:
   // some error here - just return fl_measure values
   w = (int)width(c, n);
   dx = 0;
-#if USE_GDIPLUS
-  h = height();
-  dy = descent() - h;
-#else
+
   h = height_unscaled();
   dy = descent_unscaled() - h;
   EXTENTS_UPDATE(dx, dy, w, h, gc_);
-#endif
   return;
 } // fl_text_extents
+#endif // !USE_GDIPLUS
 
 #if USE_GDIPLUS
   
@@ -704,27 +683,26 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   Gdiplus::FontFamily *pFontFamily = new Gdiplus::FontFamily[count];
   int found;
   installedFontCollection.GetFamilies(count, pFontFamily, &found);
-  for (int j = 0; j < count; ++j)
-  {
-      pFontFamily[j].GetFamilyName(familyName);
-      char *n = NULL;
-      size_t l = wcslen(familyName);
-      unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
-      n = (char*) malloc(dstlen);
-      dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
-      n[dstlen] = 0;
-      /*int i;
-      for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
-        if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
-      }
-      if (i < FL_FREE_FONT) continue;*/
-      char buffer[LF_FACESIZE + 1];
-      strcpy(buffer+1, n);
-      free(n);
-      buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-      buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-      buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-      buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  for (int j = 0; j < count; ++j) {
+    pFontFamily[j].GetFamilyName(familyName);
+    char *n = NULL;
+    size_t l = wcslen(familyName);
+    unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
+    n = (char*) malloc(dstlen);
+    dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
+    n[dstlen] = 0;
+    /*int i;
+    for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
+      if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
+    }
+    if (i < FL_FREE_FONT) continue;*/
+    char buffer[LF_FACESIZE + 1];
+    strcpy(buffer+1, n);
+    free(n);
+    buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
   }
   qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
   return (Fl_Font)fl_free_font;
@@ -797,6 +775,29 @@ void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, 
 void Fl_GDIplus_Graphics_Driver::rtl_draw(const char* c, int n, int x, int y) {
   int l = width(c, n) + .5;
   draw(c, n, x-l, y);
+}
+
+void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int &dy, int &w, int &h)
+{
+  Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  int wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
+  if (wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
+  }
+  Gdiplus::FontFamily fontFamily;
+  fd->gdiplus_font->GetFamily(&fontFamily);
+  Gdiplus::PointF origin(0,0);
+  Gdiplus::REAL em = fontFamily.GetEmHeight(fd->gdiplus_font->GetStyle());
+  Gdiplus::GraphicsPath gpath;
+  gpath.AddString((WCHAR*)wstr, wn, &fontFamily, fd->gdiplus_font->GetStyle(), em, origin, Fl_GDIplus_Graphics_Driver::format);
+  Gdiplus::RectF bounds;
+  gpath.GetBounds(&bounds, NULL, NULL);
+  w = (bounds.GetRight() - bounds.GetLeft()) * fd->gdiplus_font->GetSize() / em;
+  h = (bounds.GetBottom() - bounds.GetTop()) * fd->gdiplus_font->GetSize() / em;
+  dx = bounds.GetLeft() * fd->gdiplus_font->GetSize() / em + 1;
+  dy = bounds.GetTop() * fd->gdiplus_font->GetSize() / em - fd->linespacing + fd->descent;
 }
 
 #else
