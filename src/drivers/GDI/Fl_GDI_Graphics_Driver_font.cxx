@@ -87,7 +87,23 @@ const char* Fl_GDI_Graphics_Driver::get_font_name(Fl_Font fnum, int* ap) {
 
 static int fl_free_font = FL_FREE_FONT;
 
+extern "C" {
+  typedef int (*compare_func_t)(const void *, const void *);
+}
+
+static int sort_fonts_by_name(Fl_Fontdesc *fd1, Fl_Fontdesc *fd2) {
+  int retval = strcmp(fd1->name + 1, fd2->name + 1);
+  if (retval) return retval;
+  return *(fd1->name) - *(fd2->name);
+}
+
+static int nbSize;
+static int sizes[128];
+
 #if !USE_GDIPLUS
+
+static int fl_angle_ = 0;
+
 static int CALLBACK
 enumcbw(CONST LOGFONTW    *lpelf,
         CONST TEXTMETRICW * /*lpntm*/,
@@ -105,13 +121,6 @@ enumcbw(CONST LOGFONTW    *lpelf,
     if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n);return 1;}
   char buffer[LF_FACESIZE + 1];
   strcpy(buffer+1, n);
-#if USE_GDIPLUS // skip fonts that can't be used with GDI+
-  buffer[0] = ' ';
-  Fl_GDI_Font_Descriptor *fd = new Fl_GDI_Font_Descriptor(buffer, 14);
-  Gdiplus::Status status = fd->gdiplus_font->GetLastStatus();
-  delete fd;
-  if (status != Gdiplus::Ok) {return 1;}
-#endif
   buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
   if (lpelf->lfWeight <= 400)
     buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
@@ -121,49 +130,8 @@ enumcbw(CONST LOGFONTW    *lpelf,
   free(n);
   return 1;
 } /* enumcbw */
-#endif
-
-extern "C" {
-  typedef int (*compare_func_t)(const void *, const void *);
-}
-
-static int sort_fonts_by_name(Fl_Fontdesc *fd1, Fl_Fontdesc *fd2) {
-  int retval = strcmp(fd1->name + 1, fd2->name + 1);
-  if (retval) return retval;
-  return *(fd1->name) - *(fd2->name);
-}
 
 Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
-#if USE_GDIPLUS
-  Gdiplus::InstalledFontCollection installedFontCollection;
-  WCHAR familyName[LF_FACESIZE];  // enough space for one family name
-  int count = installedFontCollection.GetFamilyCount();
-  Gdiplus::FontFamily *pFontFamily = new Gdiplus::FontFamily[count];
-  int found;
-  installedFontCollection.GetFamilies(count, pFontFamily, &found);
-  for (int j = 0; j < count; ++j)
-  {
-    pFontFamily[j].GetFamilyName(familyName);
-    char *n = NULL;
-    size_t l = wcslen(familyName);
-    unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
-    n = (char*) malloc(dstlen);
-    dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
-    n[dstlen] = 0;
-    /*int i;
-    for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
-      if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
-    }
-    if (i < FL_FREE_FONT) continue;*/
-    char buffer[LF_FACESIZE + 1];
-    strcpy(buffer+1, n);
-    free(n);
-    buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-    buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-    buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-    buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-  }
-#else
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (fl_free_font == FL_FREE_FONT) {// if not already been called
     if (!gc) gc = fl_GetDC(0);
@@ -171,15 +139,10 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
     EnumFontFamiliesW(gc, NULL, (FONTENUMPROCW)enumcbw, xstarname != 0);
 
   }
-#endif
   qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
   return (Fl_Font)fl_free_font;
 }
 
-
-static int nbSize;
-static int sizes[128];
-#if !USE_GDIPLUS
 static int cyPerInch;
 
 static int CALLBACK
@@ -216,13 +179,8 @@ EnumSizeCbW(CONST LOGFONTW    * /*lpelf*/,
   // Stop enum if buffer overflow
   return nbSize < 128;
 }
-#endif
 
 int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
-#if USE_GDIPLUS
-  sizes[0] = 0;
-  nbSize = 1;
-#else
   nbSize = 0;
   Fl_Fontdesc *s = fl_fonts+fnum;
   if (!s->name) s = fl_fonts; // empty slot in table, use entry 0
@@ -243,10 +201,10 @@ int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
   b[l] = 0;
   EnumFontFamiliesW(gc, (WCHAR*)b, (FONTENUMPROCW)EnumSizeCbW, 0);
   free(b);
-#endif
   sizep = sizes;
   return nbSize;
 }
+#endif
 
 const char *Fl_GDI_Graphics_Driver::font_name(int num) {
   return fl_fonts[num].name;
@@ -265,11 +223,6 @@ void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
   s->fontname[0] = 0;
   s->first = 0;
 }
-
-
-#if !USE_GDIPLUS
-static int fl_angle_ = 0;
-#endif
 
 static HFONT create_gdi_font(const char *name, Fl_Fontsize fsize) {
   int weight = FW_NORMAL;
@@ -440,52 +393,29 @@ static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
   ) );
 }
 
-#if USE_GDIPLUS
-void Fl_GDIplus_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize size) {
-  fl_font(this, fnum, size);
-}
-#else
+#if !USE_GDIPLUS
+
 void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
   fl_font(this, fnum, size, 0);
 }
-#endif
 
-#if USE_GDIPLUS
-int Fl_GDIplus_Graphics_Driver::height() {
-  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (fl_fontsize) return int(fl_fontsize->linespacing);
-  else return -1;
-}
-#else
 int Fl_GDI_Graphics_Driver::height_unscaled() {
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return (fl_fontsize->metr.tmAscent + fl_fontsize->metr.tmDescent);
   else return -1;
 }
-#endif
 
-#if USE_GDIPLUS
-int Fl_GDIplus_Graphics_Driver::descent() {
-  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (fl_fontsize && fl_fontsize->gdiplus_font) return int(fl_fontsize->descent + 0.5);
-  else return -1;
-}
-#else
 int Fl_GDI_Graphics_Driver::descent_unscaled() {
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return fl_fontsize->metr.tmDescent;
   else return -1;
 }
-#endif
 
-#if USE_GDIPLUS
-int Fl_GDIplus_Graphics_Driver::size() {
-#else
 int Fl_GDI_Graphics_Driver::size_unscaled() {
-#endif
   if (font_descriptor()) return size_;
   return -1;
 }
+#endif
 
 
 // Unicode string buffer
@@ -520,18 +450,6 @@ double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
 }
 
 #if USE_GDIPLUS
-  double Fl_GDIplus_Graphics_Driver::width(const WCHAR *txt, int l) {
-    Gdiplus::Font *gdfont = ((Fl_GDI_Font_Descriptor*)font_descriptor())->gdiplus_font;
-    Gdiplus::PointF pointF(0, 0);
-    Gdiplus::RectF rect;
-    static Gdiplus::Graphics gscreen(fl_GetDC(0));
-    Gdiplus::Graphics *g = graphics_ ? graphics_ : &gscreen;
-    g->MeasureString(txt, l, gdfont, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
-    // is it possible to explain this magic?
-    double f = ((Fl_Graphics_Driver::font() >= FL_COURIER && Fl_Graphics_Driver::font() <= FL_COURIER_BOLD_ITALIC) ? 1.03 : 1.02);// / (1+ 14./(size()*50.));
-    return (rect.GetRight() - rect.GetLeft()) * f ;
-  }
-
 double Fl_GDIplus_Graphics_Driver::width(unsigned int c) {
 #else
 double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
@@ -556,7 +474,7 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
     // Creates a UTF16 string from a UCS code point.
     cc = fl_ucs_to_Utf16(c, u16, 4);
 #if USE_GDIPLUS
-    return width((WCHAR*)u16, cc);
+    return this->width((WCHAR*)u16, cc);
 #else
     // Make sure the current font is selected before we make the measurement
     SelectObject(gc_, fl_fontsize->fid);
@@ -778,6 +696,79 @@ exit_error:
 } // fl_text_extents
 
 #if USE_GDIPLUS
+  
+Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
+  Gdiplus::InstalledFontCollection installedFontCollection;
+  WCHAR familyName[LF_FACESIZE];  // enough space for one family name
+  int count = installedFontCollection.GetFamilyCount();
+  Gdiplus::FontFamily *pFontFamily = new Gdiplus::FontFamily[count];
+  int found;
+  installedFontCollection.GetFamilies(count, pFontFamily, &found);
+  for (int j = 0; j < count; ++j)
+  {
+      pFontFamily[j].GetFamilyName(familyName);
+      char *n = NULL;
+      size_t l = wcslen(familyName);
+      unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
+      n = (char*) malloc(dstlen);
+      dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
+      n[dstlen] = 0;
+      /*int i;
+      for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
+        if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
+      }
+      if (i < FL_FREE_FONT) continue;*/
+      char buffer[LF_FACESIZE + 1];
+      strcpy(buffer+1, n);
+      free(n);
+      buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+      buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+      buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+      buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  }
+  qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
+  return (Fl_Font)fl_free_font;
+}
+  
+int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
+  sizes[0] = 0;
+  nbSize = 1;
+  sizep = sizes;
+  return nbSize;
+}
+
+void Fl_GDIplus_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize size) {
+  fl_font(this, fnum, size);
+}
+
+int Fl_GDIplus_Graphics_Driver::height() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize) return int(fl_fontsize->linespacing);
+  else return -1;
+}
+
+int Fl_GDIplus_Graphics_Driver::descent() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize && fl_fontsize->gdiplus_font) return int(fl_fontsize->descent + 0.5);
+  else return -1;
+}
+
+int Fl_GDIplus_Graphics_Driver::size() {
+  if (font_descriptor()) return size_;
+  return -1;
+}
+
+double Fl_GDIplus_Graphics_Driver::width(const WCHAR *txt, int l) {
+  Gdiplus::Font *gdfont = ((Fl_GDI_Font_Descriptor*)font_descriptor())->gdiplus_font;
+  Gdiplus::PointF pointF(0, 0);
+  Gdiplus::RectF rect;
+  static Gdiplus::Graphics gscreen(fl_GetDC(0));
+  Gdiplus::Graphics *g = graphics_ ? graphics_ : &gscreen;
+  g->MeasureString(txt, l, gdfont, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
+  // is it possible to explain this magic?
+  double f = ((Fl_Graphics_Driver::font() >= FL_COURIER && Fl_Graphics_Driver::font() <= FL_COURIER_BOLD_ITALIC) ? 1.03: 1.02);
+  return (rect.GetRight() - rect.GetLeft()) * f ;
+}
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   // avoid crash if no font has been set yet
