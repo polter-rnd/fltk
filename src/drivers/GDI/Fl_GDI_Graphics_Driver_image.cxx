@@ -148,7 +148,7 @@ void Fl_GDIplus_Graphics_Driver::cache_rgb_(Fl_RGB_Image *img, bool skip_alpha)
 {
   int ld = img->ld() ? img->ld() : img->d() * img->data_w();
   Gdiplus::PixelFormat fmt;
-  int ld2;
+  int ld2 = 0;
   if (img->d() == 3 || img->d() == 1) {
     fmt = PixelFormat24bppRGB;
     ld2 = ((3*img->data_w()+3)/4)*4; // Gdiplus requires lines of length multiple of 4
