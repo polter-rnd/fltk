@@ -150,11 +150,11 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
     n = (char*) malloc(dstlen);
     dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
     n[dstlen] = 0;
-    int i;
+    /*int i;
     for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
       if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
     }
-    if (i < FL_FREE_FONT) continue;
+    if (i < FL_FREE_FONT) continue;*/
     char buffer[LF_FACESIZE + 1];
     strcpy(buffer+1, n);
     free(n);
