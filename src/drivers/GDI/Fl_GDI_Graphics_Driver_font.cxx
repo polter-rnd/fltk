@@ -271,8 +271,7 @@ void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
 static int fl_angle_ = 0;
 #endif
 
-#ifndef FL_DOXYGEN
-Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
+static HFONT create_gdi_font(const char *name, Fl_Fontsize fsize) {
   int weight = FW_NORMAL;
   int italic = 0;
   switch (*name++) {
@@ -282,7 +281,7 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   case ' ': break;
   default: name--;
   }
-  fid = CreateFont(
+  return CreateFont(
     -fsize, // negative makes it use "char size"
     0,              // logical average character width
 #if USE_GDIPLUS
@@ -302,13 +301,20 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     DEFAULT_PITCH,      // pitch and family
     name                // pointer to typeface name string
     );
-#if !USE_GDIPLUS
+}
+
+#ifndef FL_DOXYGEN
+Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
+#if USE_GDIPLUS
+  fid = NULL;
+#else
+  fid = create_gdi_font(name, fsize);
   angle = fl_angle_;
-#endif
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (!gc) gc = fl_GetDC(0);
   SelectObject(gc, fid);
   GetTextMetrics(gc, &metr);
+#endif
 //  BOOL ret = GetCharWidthFloat(fl_gc, metr.tmFirstChar, metr.tmLastChar, font->width+metr.tmFirstChar);
 // ...would be the right call, but is not implemented into Window95! (WinNT?)
   //GetCharWidth(fl_gc, 0, 255, width);
@@ -320,6 +326,7 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   size = fsize;
 #if USE_GDIPLUS
   if (fsize > 0) {
+    name++;
     wchar_t wname[100];
     fl_utf8towc(name, strlen(name), wname, 100);
     Gdiplus::FontFamily fontFamily(wname);
@@ -342,7 +349,7 @@ Fl_GDI_Font_Descriptor::~Fl_GDI_Font_Descriptor() {
 // of "free" routine pointer, or a subclass?
 #endif
   if (this == fl_graphics_driver->font_descriptor()) fl_graphics_driver->font_descriptor(NULL);
-  DeleteObject(fid);
+  if (fid) DeleteObject(fid);
   for (int i = 0; i < 64; i++) {
     if ( width[i] ) free(width[i]);
     }
@@ -445,13 +452,17 @@ void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
 
 #if USE_GDIPLUS
 int Fl_GDIplus_Graphics_Driver::height() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize) return int(fl_fontsize->linespacing);
+  else return -1;
+}
 #else
 int Fl_GDI_Graphics_Driver::height_unscaled() {
-#endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   if (fl_fontsize) return (fl_fontsize->metr.tmAscent + fl_fontsize->metr.tmDescent);
   else return -1;
 }
+#endif
 
 #if USE_GDIPLUS
 int Fl_GDIplus_Graphics_Driver::descent() {
@@ -689,6 +700,9 @@ void Fl_GDI_Graphics_Driver::text_extents_unscaled(const char *c, int n, int &dx
     w_buff = new WORD[wc_len];
     len = fl_utf8toUtf16(c, n, ext_buff, wc_len);
   }
+#if USE_GDIPLUS
+  if (!fl_fontsize->fid) fl_fontsize->fid = create_gdi_font(fl_fonts[font()].name, size());
+#endif
   SelectObject(gc2, fl_fontsize->fid);
 
   // Are there surrogate-pairs in this string? If so GetGlyphIndicesW will fail
