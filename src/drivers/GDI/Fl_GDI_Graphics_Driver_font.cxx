@@ -87,6 +87,7 @@ const char* Fl_GDI_Graphics_Driver::get_font_name(Fl_Font fnum, int* ap) {
 
 static int fl_free_font = FL_FREE_FONT;
 
+#if !USE_GDIPLUS
 static int CALLBACK
 enumcbw(CONST LOGFONTW    *lpelf,
         CONST TEXTMETRICW * /*lpntm*/,
@@ -120,6 +121,7 @@ enumcbw(CONST LOGFONTW    *lpelf,
   free(n);
   return 1;
 } /* enumcbw */
+#endif
 
 extern "C" {
   typedef int (*compare_func_t)(const void *, const void *);
@@ -132,6 +134,36 @@ static int sort_fonts_by_name(Fl_Fontdesc *fd1, Fl_Fontdesc *fd2) {
 }
 
 Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
+#if USE_GDIPLUS
+  Gdiplus::InstalledFontCollection installedFontCollection;
+  WCHAR familyName[LF_FACESIZE];  // enough space for one family name
+  int count = installedFontCollection.GetFamilyCount();
+  Gdiplus::FontFamily *pFontFamily = new Gdiplus::FontFamily[count];
+  int found;
+  installedFontCollection.GetFamilies(count, pFontFamily, &found);
+  for (int j = 0; j < count; ++j)
+  {
+    pFontFamily[j].GetFamilyName(familyName);
+    char *n = NULL;
+    size_t l = wcslen(familyName);
+    unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
+    n = (char*) malloc(dstlen);
+    dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
+    n[dstlen] = 0;
+    int i;
+    for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
+      if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n); break;}
+    }
+    if (i < FL_FREE_FONT) continue;
+    char buffer[LF_FACESIZE + 1];
+    strcpy(buffer+1, n);
+    free(n);
+    buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+    buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  }
+#else
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (fl_free_font == FL_FREE_FONT) {// if not already been called
     if (!gc) gc = fl_GetDC(0);
@@ -139,6 +171,7 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
     EnumFontFamiliesW(gc, NULL, (FONTENUMPROCW)enumcbw, xstarname != 0);
 
   }
+#endif
   qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
   return (Fl_Font)fl_free_font;
 }
