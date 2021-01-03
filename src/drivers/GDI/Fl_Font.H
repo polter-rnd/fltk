@@ -44,6 +44,7 @@ public:
   char glok[64];
 #  endif // HAVE_GL
   FL_EXPORT ~Fl_GDI_Font_Descriptor();
+  static HFONT create_gdi_font(const char *name, Fl_Fontsize size, int angle);
 };
 
 extern FL_EXPORT Fl_Fontdesc *fl_fonts; // the table

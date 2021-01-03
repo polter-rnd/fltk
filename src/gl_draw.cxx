@@ -742,32 +742,7 @@ void Fl_WinAPI_Gl_Window_Driver::get_list(Fl_Font_Descriptor *fd, int r) {
   unsigned int ii = r * 0x400;
 #if USE_GDIPLUS
   if (!gl_fd->fid) {
-    const char *name = fl_fonts[fl_font()].name;
-    int weight = FW_NORMAL;
-    int italic = 0;
-    switch (*name++) {
-    case 'I': italic = 1; break;
-    case 'P': italic = 1;
-    case 'B': weight = FW_BOLD; break;
-    case ' ': break;
-    default: name--;
-    }
-    gl_fd->fid = CreateFont(
-      -gl_fd->size, // negative makes it use "char size"
-      0,              // logical average character width
-      0,                   // angle of escapement
-      0,                   // base-line orientation angle
-      weight,
-      italic,
-      FALSE,              // underline attribute flag
-      FALSE,              // strikeout attribute flag
-      DEFAULT_CHARSET,    // character set identifier
-      OUT_DEFAULT_PRECIS, // output precision
-      CLIP_DEFAULT_PRECIS,// clipping precision
-      DEFAULT_QUALITY,    // output quality
-      DEFAULT_PITCH,      // pitch and family
-      name                // pointer to typeface name string
-    );
+    gl_fd->fid = Fl_GDI_Font_Descriptor::create_gdi_font(fl_fonts[fl_font()].name, gl_fd->size, 0);
   }
 #endif
   HFONT oldFid = (HFONT)SelectObject((HDC)fl_graphics_driver->gc(), gl_fd->fid);

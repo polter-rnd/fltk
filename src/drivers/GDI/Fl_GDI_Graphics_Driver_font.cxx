@@ -227,6 +227,35 @@ void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
 }
 
 #ifndef FL_DOXYGEN
+
+HFONT Fl_GDI_Font_Descriptor::create_gdi_font(const char *name, Fl_Fontsize size, int angle) {
+  int weight = FW_NORMAL;
+  int italic = 0;
+  switch (*name++) {
+    case 'I': italic = 1; break;
+    case 'P': italic = 1;
+    case 'B': weight = FW_BOLD; break;
+    case ' ': break;
+    default: name--;
+  }
+  return CreateFont(
+    -size, // negative makes it use "char size"
+    0,              // logical average character width
+    angle*10,                   // angle of escapement
+    angle*10,                   // base-line orientation angle
+    weight,
+    italic,
+    FALSE,              // underline attribute flag
+    FALSE,              // strikeout attribute flag
+    DEFAULT_CHARSET,    // character set identifier
+    OUT_DEFAULT_PRECIS, // output precision
+    CLIP_DEFAULT_PRECIS,// clipping precision
+    DEFAULT_QUALITY,    // output quality
+    DEFAULT_PITCH,      // pitch and family
+    name                // pointer to typeface name string
+    );
+}
+
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
   size = fsize;
 #if USE_GDIPLUS
@@ -243,41 +272,15 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     gdiplus_font = new Gdiplus::Font(&fontFamily, fsize, style, Gdiplus::UnitPixel);
     descent = double(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
     linespacing = double(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
-//fprintf(LOG,"stat=%d [%s] %d desc=%.2f LS=%.2f\n", gdiplus_font->GetLastStatus(), name-1, fsize, descent, linespacing);
   } else gdiplus_font = NULL;
 #else
-  int weight = FW_NORMAL;
-  int italic = 0;
-  switch (*name++) {
-  case 'I': italic = 1; break;
-  case 'P': italic = 1;
-  case 'B': weight = FW_BOLD; break;
-  case ' ': break;
-  default: name--;
-  }
-  fid = CreateFont(
-    -fsize, // negative makes it use "char size"
-    0,              // logical average character width
-    fl_angle_*10,                   // angle of escapement
-    fl_angle_*10,                   // base-line orientation angle
-    weight,
-    italic,
-    FALSE,              // underline attribute flag
-    FALSE,              // strikeout attribute flag
-    DEFAULT_CHARSET,    // character set identifier
-    OUT_DEFAULT_PRECIS, // output precision
-    CLIP_DEFAULT_PRECIS,// clipping precision
-    DEFAULT_QUALITY,    // output quality
-    DEFAULT_PITCH,      // pitch and family
-    name                // pointer to typeface name string
-    );
-
+  fid = Fl_GDI_Font_Descriptor::create_gdi_font(name, fsize, fl_angle_);
   angle = fl_angle_;
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (!gc) gc = fl_GetDC(0);
   SelectObject(gc, fid);
   GetTextMetrics(gc, &metr);
-#endif
+#endif // USE_GDIPLUS
 //  BOOL ret = GetCharWidthFloat(fl_gc, metr.tmFirstChar, metr.tmLastChar, font->width+metr.tmFirstChar);
 // ...would be the right call, but is not implemented into Window95! (WinNT?)
   //GetCharWidth(fl_gc, 0, 255, width);
@@ -866,4 +869,4 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
 
 #endif // USE_GDIPLUS
 
-#endif
+#endif // FL_DOXYGEN
