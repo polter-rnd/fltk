@@ -302,10 +302,6 @@ int Fl_WinAPI_Printer_Driver::begin_page (void)
     origin(0, 0);
 #endif
     fl_clip_region(0);
-fl_graphics_driver->color(FL_RED); //TMP
-fl_graphics_driver->line_style(0,2);
-fl_graphics_driver->rect(0,0,w,h);
-fl_graphics_driver->line_style(0,0);
   }
   return rsult;
 }
