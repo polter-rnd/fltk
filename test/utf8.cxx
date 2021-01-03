@@ -580,11 +580,7 @@ int main(int argc, char** argv)
   /* setup the extra font */
   Fl::set_font(extra_font,
 #ifdef _WIN32
-#if USE_GDIPLUS
                " Microsoft Sans Serif"
-#else
-               " Arial Unicode MS"
-#endif
 #elif defined(__APPLE__)
                "Monaco"
 #else
