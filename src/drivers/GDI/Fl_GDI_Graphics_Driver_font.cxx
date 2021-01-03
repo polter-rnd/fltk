@@ -389,30 +389,6 @@ static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
   ) );
 }
 
-#if !USE_GDIPLUS
-
-void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
-  fl_font(this, fnum, size, 0);
-}
-
-int Fl_GDI_Graphics_Driver::height_unscaled() {
-  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (fl_fontsize) return (fl_fontsize->metr.tmAscent + fl_fontsize->metr.tmDescent);
-  else return -1;
-}
-
-int Fl_GDI_Graphics_Driver::descent_unscaled() {
-  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (fl_fontsize) return fl_fontsize->metr.tmDescent;
-  else return -1;
-}
-
-int Fl_GDI_Graphics_Driver::size_unscaled() {
-  if (font_descriptor()) return size_;
-  return -1;
-}
-#endif
-
 
 // Unicode string buffer
 static unsigned short *wstr = NULL;
@@ -523,6 +499,27 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
 }
 
 #if !USE_GDIPLUS
+
+void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
+  fl_font(this, fnum, size, 0);
+}
+
+int Fl_GDI_Graphics_Driver::height_unscaled() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize) return (fl_fontsize->metr.tmAscent + fl_fontsize->metr.tmDescent);
+  else return -1;
+}
+
+int Fl_GDI_Graphics_Driver::descent_unscaled() {
+  Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (fl_fontsize) return fl_fontsize->metr.tmDescent;
+  else return -1;
+}
+
+int Fl_GDI_Graphics_Driver::size_unscaled() {
+  if (font_descriptor()) return size_;
+  return -1;
+}
 
 /* Add function pointer to allow us to access GetGlyphIndicesW on systems that have it,
  * without crashing on systems that do not. */
@@ -675,9 +672,70 @@ exit_error:
   EXTENTS_UPDATE(dx, dy, w, h, gc_);
   return;
 } // fl_text_extents
-#endif // !USE_GDIPLUS
 
-#if USE_GDIPLUS
+void Fl_GDI_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
+  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
+  // avoid crash if no font has been set yet
+  if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
+  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
+  int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  if(wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  }
+  TextOutW(gc_, x, y, (WCHAR*)wstr, wn);
+  SetTextColor(gc_, oldColor); // restore initial state
+}
+
+void Fl_GDI_Graphics_Driver::draw_unscaled(int angle, const char* str, int n, int x, int y) {
+  fl_font(this, Fl_Graphics_Driver::font(), size_unscaled(), angle);
+  int wn = 0; // count of UTF16 cells to render full string
+  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
+  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
+  wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  if(wn >= wstr_len) { // Array too small
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(str, n, wstr, wstr_len); // respin the translation
+  }
+  TextOutW(gc_, x, y, (WCHAR*)wstr, wn);
+  SetTextColor(gc_, oldColor);
+  fl_font(this, Fl_Graphics_Driver::font(), size_unscaled(), 0);
+}
+
+void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int y) {
+  int wn;
+  wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
+  if(wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
+  }
+
+  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
+  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
+#ifdef RTL_CHAR_BY_CHAR
+  int i = 0;
+  int lx = 0;
+  while (i < wn) { // output char by char is very bad for Arabic but coherent with fl_width()
+    lx = (int) width(wstr[i]);
+    x -= lx;
+    TextOutW(gc_, x, y, (WCHAR*)wstr + i, 1);
+    if (fl_nonspacing(wstr[i])) {
+      x += lx;
+    }
+    i++;
+  }
+#else
+  UINT old_align = SetTextAlign(gc_, TA_RIGHT | TA_RTLREADING);
+  TextOutW(gc_, x, y - height_unscaled() + descent_unscaled(), (WCHAR*)wstr, wn);
+  SetTextAlign(gc_, old_align);
+#endif
+  SetTextColor(gc_, oldColor);
+}
+  
+#else
   
 Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   Gdiplus::InstalledFontCollection installedFontCollection;
@@ -710,7 +768,7 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
   return (Fl_Font)fl_free_font;
 }
-  
+
 int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
   sizes[0] = 0;
   nbSize = 1;
@@ -801,70 +859,6 @@ void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int
   h = (bounds.GetBottom() - bounds.GetTop()) * fd->gdiplus_font->GetSize() / em;
   dx = bounds.GetLeft() * fd->gdiplus_font->GetSize() / em + 1;
   dy = bounds.GetTop() * fd->gdiplus_font->GetSize() / em - fd->linespacing + fd->descent;
-}
-
-#else
-
-void Fl_GDI_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
-  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
-  // avoid crash if no font has been set yet
-  if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
-  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
-  int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
-  if(wn >= wstr_len) {
-    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
-    wstr_len = wn + 1;
-    wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
-  }
-  TextOutW(gc_, x, y, (WCHAR*)wstr, wn);
-  SetTextColor(gc_, oldColor); // restore initial state
-}
-
-void Fl_GDI_Graphics_Driver::draw_unscaled(int angle, const char* str, int n, int x, int y) {
-  fl_font(this, Fl_Graphics_Driver::font(), size_unscaled(), angle);
-  int wn = 0; // count of UTF16 cells to render full string
-  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
-  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
-  wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
-  if(wn >= wstr_len) { // Array too small
-    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
-    wstr_len = wn + 1;
-    wn = fl_utf8toUtf16(str, n, wstr, wstr_len); // respin the translation
-  }
-  TextOutW(gc_, x, y, (WCHAR*)wstr, wn);
-  SetTextColor(gc_, oldColor);
-  fl_font(this, Fl_Graphics_Driver::font(), size_unscaled(), 0);
-}
-
-void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int y) {
-  int wn;
-  wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
-  if(wn >= wstr_len) {
-    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
-    wstr_len = wn + 1;
-    wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
-  }
-
-  COLORREF oldColor = SetTextColor(gc_, fl_RGB());
-  SelectObject(gc_, ((Fl_GDI_Font_Descriptor*)font_descriptor())->fid);
-#ifdef RTL_CHAR_BY_CHAR
-  int i = 0;
-  int lx = 0;
-  while (i < wn) { // output char by char is very bad for Arabic but coherent with fl_width()
-    lx = (int) width(wstr[i]);
-    x -= lx;
-    TextOutW(gc_, x, y, (WCHAR*)wstr + i, 1);
-    if (fl_nonspacing(wstr[i])) {
-      x += lx;
-    }
-    i++;
-  }
-#else
-  UINT old_align = SetTextAlign(gc_, TA_RIGHT | TA_RTLREADING);
-  TextOutW(gc_, x, y - height_unscaled() + descent_unscaled(), (WCHAR*)wstr, wn);
-  SetTextAlign(gc_, old_align);
-#endif
-  SetTextColor(gc_, oldColor);
 }
 
 #endif // USE_GDIPLUS
