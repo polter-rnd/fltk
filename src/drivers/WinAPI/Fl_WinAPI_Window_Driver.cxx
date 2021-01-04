@@ -334,7 +334,7 @@ void Fl_WinAPI_Window_Driver::flush_double()
     ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = &offscreen_graphics;
 #  else
     HDC sgc = fl_gc;
-    fl_gc = fl_makeDC(other_xid);
+    fl_gc = fl_makeDC((HBITMAP)other_xid);
     int savedc = SaveDC(fl_gc);
     fl_graphics_driver->gc(fl_gc);
 #  endif

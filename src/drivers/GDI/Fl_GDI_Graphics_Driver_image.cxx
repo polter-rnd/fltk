@@ -287,7 +287,7 @@ void Fl_GDIplus_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm, int XP, int YP, int 
 }
 
 void Fl_GDIplus_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
-    delete bm;
+    delete (Fl_GdiPlusBitmap*)bm;
 }
 
 #else
@@ -769,7 +769,7 @@ void Fl_GDI_Graphics_Driver::draw_fixed(Fl_RGB_Image *img, int X, int Y, int W, 
     RestoreDC(new_gc,save);
     DeleteDC(new_gc);
   } else if (img->d()==2 || img->d()==4) {
-    copy_offscreen_with_alpha(X, Y, W, H, (Fl_Offscreen)*Fl_Graphics_Driver::id(img), cx, cy);
+    copy_offscreen_with_alpha(X, Y, W, H, (HBITMAP)*Fl_Graphics_Driver::id(img), cx, cy);
   } else {
     copy_offscreen(X, Y, W, H, (Fl_Offscreen)*Fl_Graphics_Driver::id(img), cx, cy);
   }
@@ -835,7 +835,7 @@ void Fl_GDI_Printer_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb, int XP, int YP,
 void Fl_GDI_Graphics_Driver::uncache(Fl_RGB_Image*, fl_uintptr_t &id_, fl_uintptr_t &mask_)
 {
   if (id_) {
-    DeleteObject((Fl_Offscreen)id_);
+    DeleteObject((HBITMAP)id_);
     id_ = 0;
   }
 
@@ -1000,7 +1000,7 @@ void Fl_GDI_Graphics_Driver::cache(Fl_Pixmap *img) {
 }
 
 void Fl_GDI_Graphics_Driver::uncache_pixmap(fl_uintptr_t offscreen) {
-  DeleteObject((Fl_Offscreen)offscreen);
+  DeleteObject((HBITMAP)offscreen);
 }
 
 #endif

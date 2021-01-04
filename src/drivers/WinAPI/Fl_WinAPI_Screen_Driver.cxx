@@ -672,7 +672,7 @@ void Fl_WinAPI_Screen_Driver::offscreen_size(Fl_Offscreen off, int &width, int &
   height = ((Gdiplus::Bitmap*)off)->GetHeight();
 #else
   BITMAP bitmap;
-  if ( GetObject(off, sizeof(BITMAP), &bitmap) ) {
+  if ( GetObject((HBITMAP)off, sizeof(BITMAP), &bitmap) ) {
     width = bitmap.bmWidth;
     height = bitmap.bmHeight;
   }

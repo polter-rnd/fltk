@@ -132,18 +132,18 @@ char Fl_GDIplus_Graphics_Driver::can_do_alpha_blending() {
 void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_Offscreen bitmap, int srcx, int srcy) {
   if (srcx < 0) {w += srcx; x -= srcx; srcx = 0;}
   if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
-  int off_width = bitmap->GetWidth()/scale();
-  int off_height = bitmap->GetHeight()/scale();
+  int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth()/scale();
+  int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight()/scale();
   if (srcx + w >= off_width) {w = off_width - srcx;}
   if (srcy + h >= off_height) {h = off_height - srcy;}
   if (w <= 0 || h <= 0) return;
   push_clip(x, y, w, h);
-  graphics_->DrawImage(bitmap, Gdiplus::Rect(x-srcx, y-srcy, off_width, off_height));
+  graphics_->DrawImage(((Gdiplus::Bitmap*)bitmap), Gdiplus::Rect(x-srcx, y-srcy, off_width, off_height));
   pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
-  r->Union(Gdiplus::Rect(X,Y,W,H));
+  ((Gdiplus::Region*)r)->Union(Gdiplus::Rect(X,Y,W,H));
 }
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex0(float x, float y) {
@@ -167,7 +167,7 @@ Fl_Region Fl_GDIplus_Graphics_Driver::XRectangleRegion(int x, int y, int w, int 
 }
 
 void Fl_GDIplus_Graphics_Driver::XDestroyRegion(Fl_Region r) {
-  delete r;
+  delete (Gdiplus::Region*)r;
 }
 
 void Fl_GDIplus_Graphics_Driver::scale(float f) {
@@ -210,7 +210,7 @@ void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, doub
 }
 
 Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscreen) {
-  int w = offscreen->GetWidth(), h = offscreen->GetHeight();
+  int w = ((Gdiplus::Bitmap*)offscreen)->GetWidth(), h = ((Gdiplus::Bitmap*)offscreen)->GetHeight();
   Gdiplus::Rect rect(0, 0, w, h);
   Gdiplus::BitmapData bmdata;
   int ld = ((3*w+3)/4)*4;
@@ -220,8 +220,8 @@ Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscree
   bmdata.Stride = ld;
   bmdata.PixelFormat = PixelFormat24bppRGB;
   bmdata.Scan0 = array;
-  offscreen->LockBits(&rect, Gdiplus::ImageLockModeUserInputBuf | Gdiplus::ImageLockModeRead, PixelFormat24bppRGB, &bmdata);
-  offscreen->UnlockBits(&bmdata);
+  ((Gdiplus::Bitmap*)offscreen)->LockBits(&rect, Gdiplus::ImageLockModeUserInputBuf | Gdiplus::ImageLockModeRead, PixelFormat24bppRGB, &bmdata);
+  ((Gdiplus::Bitmap*)offscreen)->UnlockBits(&bmdata);
   uchar *from = array;
   for (int i = 0; i < h; i++) { // convert BGR to RGB
     for (uchar* p = from; p < from+3*w; p += 3) {
@@ -325,7 +325,7 @@ void Fl_GDI_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_Offsc
   if (w <= 0 || h <= 0) return;
   HDC new_gc = CreateCompatibleDC(gc_);
   int save = SaveDC(new_gc);
-  SelectObject(new_gc, bitmap);
+  SelectObject(new_gc, (HBITMAP)bitmap);
   BitBlt(gc_, x, y, w, h, new_gc, srcx, srcy, SRCCOPY);
   RestoreDC(new_gc, save);
   DeleteDC(new_gc);
@@ -380,7 +380,7 @@ void Fl_GDI_Graphics_Driver::untranslate_all() {
 
 void Fl_GDI_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
   Fl_Region R = XRectangleRegion(X, Y, W, H);
-  CombineRgn(r, r, R, RGN_OR);
+  CombineRgn((HRGN)r, (HRGN)r, (HRGN)R, RGN_OR);
   XDestroyRegion(R);
 }
 
@@ -409,7 +409,7 @@ Fl_Region Fl_GDI_Graphics_Driver::XRectangleRegion(int x, int y, int w, int h) {
 }
 
 void Fl_GDI_Graphics_Driver::XDestroyRegion(Fl_Region r) {
-  DeleteObject(r);
+  DeleteObject((HRGN)r);
 }
 
 
@@ -455,8 +455,8 @@ HRGN Fl_GDI_Graphics_Driver::scale_region(HRGN r, float f, Fl_GDI_Graphics_Drive
 
 
 Fl_Region Fl_GDI_Graphics_Driver::scale_clip(float f) {
-  HRGN r = rstack[rstackptr];
-  HRGN r2 = scale_region(r, f, this);
+  HRGN r = (HRGN)rstack[rstackptr];
+  HRGN r2 = (HRGN)scale_region(r, f, this);
   return (r == r2 ? NULL : (rstack[rstackptr] = r2, r));
 }
 

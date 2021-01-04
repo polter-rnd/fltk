@@ -1304,7 +1304,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         DeleteObject(R);
         if (i->region) {
           // Also tell Windows that we are drawing someplace else as well...
-          i->region->Union(gdi_rgn);
+          ((Gdiplus::Region*)i->region)->Union(gdi_rgn);
           delete gdi_rgn;
         } else {
           i->region = gdi_rgn;
@@ -1312,19 +1312,27 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 #else
         // convert i->region in FLTK units to R2 in drawing units
-        HRGN R2 = Fl_GDI_Graphics_Driver::scale_region(i->region, scale, NULL);
+        HRGN R2 = Fl_GDI_Graphics_Driver::scale_region((HRGN)(i->region), scale, NULL);
 
         RECT r_box;
         if (scale != 1 && GetRgnBox(R, &r_box) != NULLREGION) {
           // add de-scaled update region to i->region in FLTK units
+<<<<<<< HEAD
           r_box.left = LONG(r_box.left / scale);
           r_box.right = LONG(r_box.right / scale);
           r_box.top = LONG(r_box.top / scale);
           r_box.bottom = LONG(r_box.bottom / scale);
           Fl_Region R3 = CreateRectRgn(r_box.left, r_box.top, r_box.right + 1, r_box.bottom + 1);
+=======
+          r_box.left /= scale;
+          r_box.right /= scale;
+          r_box.top /= scale;
+          r_box.bottom /= scale;
+          HRGN R3 = CreateRectRgn(r_box.left, r_box.top, r_box.right + 1, r_box.bottom + 1);
+>>>>>>> Windows GDI+: change the declarations of platform-specific types.
           if (!i->region) i->region = R3;
           else {
-            CombineRgn(i->region, i->region, R3, RGN_OR);
+            CombineRgn((HRGN)(i->region), (HRGN)(i->region), R3, RGN_OR);
             DeleteObject(R3);
           }
         }

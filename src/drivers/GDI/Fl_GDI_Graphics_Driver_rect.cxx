@@ -141,11 +141,11 @@ void Fl_GDIplus_Graphics_Driver::push_clip(int x, int y, int w, int h) {
     r = XRectangleRegion(x,y,w,h);
     Fl_Region current = rstack[rstackptr];
     if (current) {
-      r->Intersect(current);
+      ((Gdiplus::Region*)r)->Intersect((Gdiplus::Region*)current);
     }
   } else { // make empty clip region:
     r = new Gdiplus::Region();
-    r->MakeEmpty();
+    ((Gdiplus::Region*)r)->MakeEmpty();
   }
   if (rstackptr < region_stack_max) rstack[++rstackptr] = r;
   else Fl::warning("Fl_GDI_Graphics_Driver::push_clip: clip stack overflow!\n");
@@ -185,7 +185,7 @@ int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
   if (x+w <= 0 || y+h <= 0) return 0;
   Fl_Region r = rstack[rstackptr];
   if (!r) return 1;
-  Fl_Region r2 = XRectangleRegion(x, y, w, h);
+  Gdiplus::Region* r2 = (Gdiplus::Region*)XRectangleRegion(x, y, w, h);
   r2->Intersect((Gdiplus::Region*)r);
   int retval = !r2->IsEmpty(graphics_);
   delete r2;
@@ -197,7 +197,7 @@ void Fl_GDIplus_Graphics_Driver::restore_clip() {
   if (gc_ && graphics_) {
     Fl_Region r = rstack[rstackptr];
     if (r) {
-       graphics_->SetClip(r);
+       graphics_->SetClip((Gdiplus::Region*)r);
     } else {
       graphics_->ResetClip();
     }
@@ -381,7 +381,7 @@ void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
     r = XRectangleRegion(x,y,w,h);
     Fl_Region current = rstack[rstackptr];
     if (current) {
-      CombineRgn(r,r,current,RGN_AND);
+      CombineRgn((HRGN)r,(HRGN)r,(HRGN)current,RGN_AND);
     }
   } else { // make empty clip region:
     r = CreateRectRgn(0,0,0,0);
@@ -399,10 +399,10 @@ int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y,
   // intersection, so we have to check for partial intersection ourselves.
   // However, given that the regions may be composite, we have to do
   // some voodoo stuff...
-  Fl_Region rr = XRectangleRegion(x,y,w,h);
-  Fl_Region temp = CreateRectRgn(0,0,0,0);
+  HRGN rr = (HRGN)XRectangleRegion(x,y,w,h);
+  HRGN temp = CreateRectRgn(0,0,0,0);
   int ret;
-  if (CombineRgn(temp, rr, r, RGN_AND) == NULLREGION) { // disjoint
+  if (CombineRgn(temp, rr, (HRGN)r, RGN_AND) == NULLREGION) { // disjoint
     W = H = 0;
     ret = 2;
   } else if (EqualRgn(temp, rr)) { // complete
@@ -437,15 +437,15 @@ int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
   } else {
     rect.left = x; rect.top = y; rect.right = x+w; rect.bottom = y+h;
   }
-  return RectInRegion(r,&rect);
+  return RectInRegion((HRGN)r,&rect);
 }
 
 void Fl_GDI_Graphics_Driver::restore_clip() {
   fl_clip_state_number++;
   if (gc_) {
     HRGN r = NULL;
-    if (rstack[rstackptr]) r = scale_clip(scale());
-    SelectClipRgn(gc_, rstack[rstackptr]); // if region is NULL, clip is automatically cleared
+    if (rstack[rstackptr]) r = (HRGN)scale_clip(scale());
+    SelectClipRgn(gc_, (HRGN)rstack[rstackptr]); // if region is NULL, clip is automatically cleared
     if (r) unscale_clip(r);
   }
 }
