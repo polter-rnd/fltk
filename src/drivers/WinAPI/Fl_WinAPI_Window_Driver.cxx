@@ -150,16 +150,18 @@ void Fl_WinAPI_Window_Driver::shape_bitmap_(Fl_Image* b) {
 }
 
 void Fl_WinAPI_Window_Driver::shape_alpha_(Fl_Image* img, int offset) {
-  int i, j, d = img->d(), w = img->w(), h = img->h(), bytesperrow = (w+7)/8;
+  int i, j, d = img->d(), w = img->data_w(), h = img->data_h(), bytesperrow = (w+7)/8;
+  int ld = img->ld() ? img->ld() : d * img->data_w();
   unsigned u;
   uchar byte, onebit;
   // build an Fl_Bitmap covering the non-fully transparent/black part of the image
   const uchar* bits = new uchar[h*bytesperrow]; // to store the bitmap
-  const uchar* alpha = (const uchar*)*img->data() + offset; // points to alpha value of rgba pixels
   for (i = 0; i < h; i++) {
     uchar *p = (uchar*)bits + i * bytesperrow;
     byte = 0;
     onebit = 1;
+    // points to alpha value of the start of the i'th pixel row
+    const uchar* alpha = (const uchar*)*img->data() + i*ld + offset;
     for (j = 0; j < w; j++) {
       if (d == 3) {
         u = *alpha;
