@@ -48,9 +48,6 @@ Fl_WinAPI_Window_Driver::Fl_WinAPI_Window_Driver(Fl_Window *win)
   memset(icon_, 0, sizeof(icon_data));
   cursor = NULL;
   screen_num_ = -1;
-#if USE_GDIPLUS
-  graphics_ = NULL;
-#endif
 }
 
 
@@ -61,9 +58,6 @@ Fl_WinAPI_Window_Driver::~Fl_WinAPI_Window_Driver()
     delete shape_data_;
   }
   delete icon_;
-#if USE_GDIPLUS
-  delete graphics_;
-#endif
 }
 
 int Fl_WinAPI_Window_Driver::screen_num() {
@@ -333,6 +327,7 @@ void Fl_WinAPI_Window_Driver::flush_double()
     Gdiplus::Graphics offscreen_graphics((Gdiplus::Bitmap*)other_xid);
     float s = fl_graphics_driver->scale();
     offscreen_graphics.ScaleTransform(s, s);
+    Gdiplus::Graphics *oldg = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_;
     ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = &offscreen_graphics;
 #  else
     HDC sgc = fl_gc;
@@ -343,7 +338,7 @@ void Fl_WinAPI_Window_Driver::flush_double()
     fl_graphics_driver->restore_clip(); // duplicate clip region into new gc
     draw();
 #  if USE_GDIPLUS
-    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = graphics_;
+    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = oldg;
 #  else
     RestoreDC(fl_gc, savedc);
     DeleteDC(fl_gc);
@@ -435,6 +430,9 @@ void Fl_WinAPI_Window_Driver::free_icons() {
 
 
 void Fl_WinAPI_Window_Driver::make_current() {
+#if USE_GDIPLUS
+  bool need_graphics = (fl_xid(pWindow) != fl_window);
+#endif
   fl_GetDC(fl_xid(pWindow));
 
 #if USE_COLORMAP && !USE_GDIPLUS
@@ -445,12 +443,16 @@ void Fl_WinAPI_Window_Driver::make_current() {
   fl_select_palette();
 #endif // USE_COLORMAP
 
-#if USE_GDIPLUS
-  Fl_GDIplus_Graphics_Driver *dr = (Fl_GDIplus_Graphics_Driver*)fl_graphics_driver;
-  dr->graphics_ = graphics_;
-#endif
   fl_graphics_driver->clip_region(0);
   fl_graphics_driver->scale(Fl::screen_driver()->scale(screen_num()));
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver *dr = (Fl_GDIplus_Graphics_Driver*)fl_graphics_driver;
+  if (need_graphics || !dr->graphics_) {
+    delete dr->graphics_;
+    dr->graphics_ = new Gdiplus::Graphics((HDC)fl_graphics_driver->gc());
+    dr->graphics_->ScaleTransform(fl_graphics_driver->scale(), fl_graphics_driver->scale());
+  }
+#endif
 }
 
 void Fl_WinAPI_Window_Driver::label(const char *name,const char *iname) {

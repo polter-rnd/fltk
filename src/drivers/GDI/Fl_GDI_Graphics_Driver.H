@@ -86,7 +86,7 @@ public:
   void cache(Fl_RGB_Image *img);
   virtual double width(const char *str, int n);
   virtual double width(unsigned int c);
-  double width(const WCHAR *txt, int l);
+  double width_wchar(const WCHAR *txt, int l);
   void text_extents(const char*, int n, int& dx, int& dy, int& w, int& h);
   int height();
   int descent();

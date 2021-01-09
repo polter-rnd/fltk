@@ -87,7 +87,7 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
 }
 
-static ULONG_PTR gdiplusToken;
+static ULONG_PTR gdiplusToken = 0;
 Gdiplus::StringFormat *Fl_GDIplus_Graphics_Driver::format = NULL;
 
 /*

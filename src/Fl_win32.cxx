@@ -1292,8 +1292,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
           ValidateRgn(hWnd, R);
         }
         Gdiplus::Region *gdi_rgn;
-        if (r != NULLREGION) { // non-empty update region
-          Gdiplus::Graphics *gr = ((Fl_WinAPI_Window_Driver*)Fl_Window_Driver::driver(window))->graphics_;
+        Gdiplus::Graphics *gr = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_;
+        if (gr && r != NULLREGION) { // non-empty update region
           gr->SetClip(R); // set update region as the graphics' clipping region
           Gdiplus::Rect gdi_rect;
           gr->GetClipBounds(&gdi_rect); // in FLTK units
@@ -1649,9 +1649,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
 #if USE_GDIPLUS
         if (wParam != SIZE_MINIMIZED && wParam != SIZE_MAXHIDE) {
-          delete Fl_WinAPI_Window_Driver::driver(window)->graphics_;
-          Fl_WinAPI_Window_Driver::driver(window)->graphics_ = new Gdiplus::Graphics(fl_xid(window));
-          Fl_WinAPI_Window_Driver::driver(window)->graphics_->ScaleTransform(scale, scale);
+          delete ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics_;
+          ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics_ = NULL;
         }
 #endif
         break;
@@ -2236,10 +2235,6 @@ Fl_X *Fl_WinAPI_Window_Driver::makeWindow() {
                           );
   if (lab)
     free(lab);
-#if USE_GDIPLUS
-  graphics_ = new Gdiplus::Graphics(x->xid);
-  graphics_->ScaleTransform(s, s);
-#endif
   x->next = Fl_X::first;
   Fl_X::first = x;
 

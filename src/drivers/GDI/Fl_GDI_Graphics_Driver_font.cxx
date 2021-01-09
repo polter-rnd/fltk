@@ -446,7 +446,7 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
     // Creates a UTF16 string from a UCS code point.
     cc = fl_ucs_to_Utf16(c, u16, 4);
 #if USE_GDIPLUS
-    return this->width((WCHAR*)u16, cc);
+    return this->width_wchar((WCHAR*)u16, cc);
 #else
     // Make sure the current font is selected before we make the measurement
     SelectObject(gc_, fl_fontsize->fid);
@@ -473,7 +473,7 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
   unsigned short ii = r * 0x400;
 #if USE_GDIPLUS
   ii += c &0x03FF;
-  fl_fontsize->width[r][c&0x03FF] = width((WCHAR*)&ii, 1);
+  fl_fontsize->width[r][c&0x03FF] = width_wchar((WCHAR*)&ii, 1);
 #else
   // The following code makes a best effort attempt to obtain a valid fl_gc.
   // If no fl_gc is available at the time we call fl_width(), then we first
@@ -797,7 +797,7 @@ int Fl_GDIplus_Graphics_Driver::size() {
   return -1;
 }
 
-double Fl_GDIplus_Graphics_Driver::width(const WCHAR *txt, int l) {
+double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   Gdiplus::Font *gdfont = ((Fl_GDI_Font_Descriptor*)font_descriptor())->gdiplus_font;
   Gdiplus::PointF pointF(0, 0);
   Gdiplus::RectF rect;
