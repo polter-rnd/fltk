@@ -739,7 +739,7 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
   
 #else
   
-Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
+Fl_Font Fl_GDIplus_Graphics_Driver::set_fonts(const char* xstarname) {
   Gdiplus::InstalledFontCollection installedFontCollection;
   WCHAR familyName[LF_FACESIZE];  // enough space for one family name
   int count = installedFontCollection.GetFamilyCount();
@@ -771,7 +771,7 @@ Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   return (Fl_Font)fl_free_font;
 }
 
-int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
+int Fl_GDIplus_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
   sizes[0] = 0;
   nbSize = 1;
   sizep = sizes;
