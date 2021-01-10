@@ -14,10 +14,7 @@
 //     https://www.fltk.org/bugs.php
 //
 
-#if USE_GDIPLUS
-#  define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
-
-#else
+#if !USE_GDIPLUS
 
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
@@ -36,7 +33,7 @@
 # define _WIN32_WINNT 0x0500
 #endif
 
-#endif // USE_GDIPLUS
+#endif // !USE_GDIPLUS
 
 #include "Fl_GDI_Graphics_Driver.H"
 #include "../../flstring.h"
@@ -66,7 +63,13 @@
 #define ENDOFBUFFER 127 // sizeof(Fl_Font.fontname)-1
 
 // turn a stored font name into a pretty name:
-const char* Fl_GDI_Graphics_Driver::get_font_name(Fl_Font fnum, int* ap) {
+const char*
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver
+#else
+  Fl_GDI_Graphics_Driver
+#endif
+          ::get_font_name(Fl_Font fnum, int* ap) {
   Fl_Fontdesc *f = fl_fonts + fnum;
   if (!f->fontname[0]) {
     const char* p = f->name;
@@ -208,11 +211,23 @@ int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
 }
 #endif // !USE_GDIPLUS
 
-const char *Fl_GDI_Graphics_Driver::font_name(int num) {
+const char *
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver
+#else
+  Fl_GDI_Graphics_Driver
+#endif
+        ::font_name(int num) {
   return fl_fonts[num].name;
 }
 
-void Fl_GDI_Graphics_Driver::font_name(int num, const char *name) {
+void
+#if USE_GDIPLUS
+  Fl_GDIplus_Graphics_Driver
+#else
+  Fl_GDI_Graphics_Driver
+#endif
+        ::font_name(int num, const char *name) {
   Fl_Fontdesc *s = fl_fonts + num;
   if (s->name) {
     if (!strcmp(s->name, name)) {s->name = name; return;}
@@ -395,11 +410,13 @@ static unsigned short *wstr = NULL;
 static int wstr_len    = 0;
 
 
+double
 #if USE_GDIPLUS
-double Fl_GDIplus_Graphics_Driver::width(const char* c, int n) {
+  Fl_GDIplus_Graphics_Driver::width
 #else
-double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
+  Fl_GDI_Graphics_Driver::width_unscaled
 #endif
+    (const char* c, int n) {
   int i = 0;
   if (!font_descriptor()) return -1.0;
   double w = 0.0;
@@ -421,11 +438,13 @@ double Fl_GDI_Graphics_Driver::width_unscaled(const char* c, int n) {
   return w;
 }
 
+double
 #if USE_GDIPLUS
-double Fl_GDIplus_Graphics_Driver::width(unsigned int c) {
+  Fl_GDIplus_Graphics_Driver::width
 #else
-double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
+  Fl_GDI_Graphics_Driver::width_unscaled
 #endif
+      (unsigned int c) {
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   unsigned int r;
 #if !USE_GDIPLUS
