@@ -33,6 +33,8 @@
 # define _WIN32_WINNT 0x0500
 #endif
 
+static int fl_angle_ = 0;
+
 #endif // !USE_GDIPLUS
 
 #include "Fl_GDI_Graphics_Driver.H"
@@ -45,7 +47,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <FL/fl_string.h>
-//FILE*LOG=fopen("log.log","w");
 
 // This function fills in the FLTK font table with all the fonts that
 // are found on the X server.  It tries to place the fonts into families
@@ -61,6 +62,37 @@
 // the header files I decided to store this value in the last character
 // of the font name array.
 #define ENDOFBUFFER 127 // sizeof(Fl_Font.fontname)-1
+
+// WARNING: if you add to this table, you must redefine FL_FREE_FONT
+// in Enumerations.H & recompile!!
+static Fl_Fontdesc built_in_table[] = {
+{" Arial"},
+{"BArial"},
+{"IArial"},
+{"PArial"},
+{" Courier New"},
+{"BCourier New"},
+{"ICourier New"},
+{"PCourier New"},
+{" Times New Roman"},
+{"BTimes New Roman"},
+{"ITimes New Roman"},
+{"PTimes New Roman"},
+{" Symbol"},
+#if USE_GDIPLUS
+  {" Georgia"},
+  {"BGeorgia"},
+#else
+{" Terminal"},
+{"BTerminal"},
+#endif
+{" Wingdings"},
+};
+
+Fl_Fontdesc* fl_fonts = built_in_table;
+static int fl_free_font = FL_FREE_FONT;
+static int nbSize;
+static int sizes[128];
 
 // turn a stored font name into a pretty name:
 const char*
@@ -90,8 +122,6 @@ const char*
   return f->fontname;
 }
 
-static int fl_free_font = FL_FREE_FONT;
-
 extern "C" {
   typedef int (*compare_func_t)(const void *, const void *);
 }
@@ -101,115 +131,6 @@ static int sort_fonts_by_name(Fl_Fontdesc *fd1, Fl_Fontdesc *fd2) {
   if (retval) return retval;
   return *(fd1->name) - *(fd2->name);
 }
-
-static int nbSize;
-static int sizes[128];
-
-#if !USE_GDIPLUS
-
-static int fl_angle_ = 0;
-
-static int CALLBACK
-enumcbw(CONST LOGFONTW    *lpelf,
-        CONST TEXTMETRICW * /*lpntm*/,
-       DWORD            /*FontType*/,
-       LPARAM           p) {
-  if (!p && lpelf->lfCharSet != ANSI_CHARSET) return 1;
-  char *n = NULL;
-  size_t l = wcslen(lpelf->lfFaceName);
-  unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)lpelf->lfFaceName, (unsigned) l) + 1; // measure the string
-  n = (char*) malloc(dstlen);
-//n[fl_unicode2utf((wchar_t*)lpelf->lfFaceName, l, n)] = 0;
-  dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)lpelf->lfFaceName, (unsigned) l); // convert the string
-  n[dstlen] = 0;
-  for (int i=0; i<FL_FREE_FONT; i++) // skip if one of our built-in fonts
-    if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n);return 1;}
-  char buffer[LF_FACESIZE + 1];
-  strcpy(buffer+1, n);
-  buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-  if (lpelf->lfWeight <= 400)
-    buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-  buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-  if (lpelf->lfWeight <= 400)
-    buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
-  free(n);
-  return 1;
-} /* enumcbw */
-
-Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
-  HDC gc = (HDC)fl_graphics_driver->gc();
-  if (fl_free_font == FL_FREE_FONT) {// if not already been called
-    if (!gc) gc = fl_GetDC(0);
-
-    EnumFontFamiliesW(gc, NULL, (FONTENUMPROCW)enumcbw, xstarname != 0);
-
-  }
-  qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
-  return (Fl_Font)fl_free_font;
-}
-
-static int cyPerInch;
-
-static int CALLBACK
-
-EnumSizeCbW(CONST LOGFONTW    * /*lpelf*/,
-           CONST TEXTMETRICW *lpntm,
-           DWORD            fontType,
-           LPARAM           /*p*/) {
-  if ((fontType & RASTER_FONTTYPE) == 0) {
-    sizes[0] = 0;
-    nbSize = 1;
-
-    // Scalable font
-    return 0;
-  }
-
-  int add = lpntm->tmHeight - lpntm->tmInternalLeading;
-  add = MulDiv(add, 72, cyPerInch);
-
-  int start = 0;
-  while ((start < nbSize) && (sizes[start] < add)) {
-    start++;
-  }
-
-  if ((start < nbSize) && (sizes[start] == add)) {
-    return 1;
-  }
-
-  for (int i=nbSize; i>start; i--) sizes[i] = sizes[i - 1];
-
-  sizes[start] = add;
-  nbSize++;
-
-  // Stop enum if buffer overflow
-  return nbSize < 128;
-}
-
-int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
-  nbSize = 0;
-  Fl_Fontdesc *s = fl_fonts+fnum;
-  if (!s->name) s = fl_fonts; // empty slot in table, use entry 0
-
-  HDC gc = (HDC)fl_graphics_driver->gc();
-  if (!gc) gc = fl_GetDC(0);
-  cyPerInch = GetDeviceCaps(gc, LOGPIXELSY);
-  if (cyPerInch < 1) cyPerInch = 1;
-
-//  int l = fl_utf_nb_char((unsigned char*)s->name+1, strlen(s->name+1));
-//  unsigned short *b = (unsigned short*) malloc((l + 1) * sizeof(short));
-//  fl_utf2unicode((unsigned char*)s->name+1, l, (wchar_t*)b);
-  const char *nm = (const char*)s->name+1;
-  size_t len = strlen(s->name+1);
-  unsigned l = fl_utf8toUtf16(nm, (unsigned) len, NULL, 0); // Pass NULL to query length required
-  unsigned short *b = (unsigned short*) malloc((l + 1) * sizeof(short));
-  l = fl_utf8toUtf16(nm, (unsigned) len, b, (l+1)); // Now do the conversion
-  b[l] = 0;
-  EnumFontFamiliesW(gc, (WCHAR*)b, (FONTENUMPROCW)EnumSizeCbW, 0);
-  free(b);
-  sizep = sizes;
-  return nbSize;
-}
-#endif // !USE_GDIPLUS
 
 const char *
 #if USE_GDIPLUS
@@ -241,8 +162,6 @@ void
   s->first = 0;
 }
 
-#ifndef FL_DOXYGEN
-
 HFONT Fl_GDI_Font_Descriptor::create_gdi_font(const char *name, Fl_Fontsize size, int angle) {
   int weight = FW_NORMAL;
   int italic = 0;
@@ -269,6 +188,55 @@ HFONT Fl_GDI_Font_Descriptor::create_gdi_font(const char *name, Fl_Fontsize size
     DEFAULT_PITCH,      // pitch and family
     name                // pointer to typeface name string
     );
+}
+
+static Fl_GDI_Font_Descriptor* find(Fl_Font fnum, Fl_Fontsize size
+#if !USE_GDIPLUS
+, int angle
+#endif
+) {
+  Fl_Fontdesc* s = fl_fonts+fnum;
+  if (!s->name) s = fl_fonts; // use 0 if fnum undefined
+  Fl_GDI_Font_Descriptor* f;
+  for (f = (Fl_GDI_Font_Descriptor*)s->first; f; f = (Fl_GDI_Font_Descriptor*)f->next)
+    if (f->size == size
+#if !USE_GDIPLUS
+    && f->angle == angle
+#endif
+    ) return f;
+  f = new Fl_GDI_Font_Descriptor(s->name, size);
+  f->next = s->first;
+  s->first = f;
+  return f;
+}
+
+static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
+#if !USE_GDIPLUS
+, int angle
+#endif
+) {
+  if (fnum==-1) { // just make sure that we will load a new font next time
+#if !USE_GDIPLUS
+    fl_angle_ = 0;
+#endif
+    driver->Fl_Graphics_Driver::font(0, 0);
+    return;
+  }
+#if USE_GDIPLUS
+  if (fnum == driver->Fl_Graphics_Driver::font() && size == driver->size() )
+#else
+  if (fnum == driver->Fl_Graphics_Driver::font() && size == ((Fl_GDI_Graphics_Driver*)driver)->size_unscaled() && angle == fl_angle_)
+#endif
+    return;
+#if !USE_GDIPLUS
+  fl_angle_ = angle;
+#endif
+  driver->Fl_Graphics_Driver::font(fnum, size);
+  driver->font_descriptor( find(fnum, size
+#if !USE_GDIPLUS
+  , angle
+#endif
+  ) );
 }
 
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
@@ -322,93 +290,9 @@ Fl_GDI_Font_Descriptor::~Fl_GDI_Font_Descriptor() {
 #endif
 }
 
-////////////////////////////////////////////////////////////////
-
-// WARNING: if you add to this table, you must redefine FL_FREE_FONT
-// in Enumerations.H & recompile!!
-static Fl_Fontdesc built_in_table[] = {
-{" Arial"},
-{"BArial"},
-{"IArial"},
-{"PArial"},
-{" Courier New"},
-{"BCourier New"},
-{"ICourier New"},
-{"PCourier New"},
-{" Times New Roman"},
-{"BTimes New Roman"},
-{"ITimes New Roman"},
-{"PTimes New Roman"},
-{" Symbol"},
-#if USE_GDIPLUS
-  {" Georgia"},
-  {"BGeorgia"},
-#else
-{" Terminal"},
-{"BTerminal"},
-#endif
-{" Wingdings"},
-};
-
-Fl_Fontdesc* fl_fonts = built_in_table;
-
-static Fl_GDI_Font_Descriptor* find(Fl_Font fnum, Fl_Fontsize size
-#if !USE_GDIPLUS
-, int angle
-#endif
-) {
-  Fl_Fontdesc* s = fl_fonts+fnum;
-  if (!s->name) s = fl_fonts; // use 0 if fnum undefined
-  Fl_GDI_Font_Descriptor* f;
-  for (f = (Fl_GDI_Font_Descriptor*)s->first; f; f = (Fl_GDI_Font_Descriptor*)f->next)
-    if (f->size == size 
-#if !USE_GDIPLUS
-    && f->angle == angle
-#endif
-    ) return f;
-  f = new Fl_GDI_Font_Descriptor(s->name, size);
-  f->next = s->first;
-  s->first = f;
-  return f;
-}
-
-////////////////////////////////////////////////////////////////
-// Public interface:
-
-static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
-#if !USE_GDIPLUS
-, int angle
-#endif
-) {
-  if (fnum==-1) { // just make sure that we will load a new font next time
-#if !USE_GDIPLUS
-    fl_angle_ = 0;
-#endif
-    driver->Fl_Graphics_Driver::font(0, 0);
-    return;
-  }
-#if USE_GDIPLUS
-  if (fnum == driver->Fl_Graphics_Driver::font() && size == driver->size() )
-#else
-  if (fnum == driver->Fl_Graphics_Driver::font() && size == ((Fl_GDI_Graphics_Driver*)driver)->size_unscaled() && angle == fl_angle_)
-#endif
-    return;
-#if !USE_GDIPLUS
-  fl_angle_ = angle;
-#endif
-  driver->Fl_Graphics_Driver::font(fnum, size);
-  driver->font_descriptor( find(fnum, size
-#if !USE_GDIPLUS
-  , angle
-#endif
-  ) );
-}
-
-
 // Unicode string buffer
 static unsigned short *wstr = NULL;
 static int wstr_len    = 0;
-
 
 double
 #if USE_GDIPLUS
@@ -520,6 +404,107 @@ double
 }
 
 #if !USE_GDIPLUS
+
+static int CALLBACK
+enumcbw(CONST LOGFONTW    *lpelf,
+        CONST TEXTMETRICW * /*lpntm*/,
+       DWORD            /*FontType*/,
+       LPARAM           p) {
+  if (!p && lpelf->lfCharSet != ANSI_CHARSET) return 1;
+  char *n = NULL;
+  size_t l = wcslen(lpelf->lfFaceName);
+  unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)lpelf->lfFaceName, (unsigned) l) + 1; // measure the string
+  n = (char*) malloc(dstlen);
+//n[fl_unicode2utf((wchar_t*)lpelf->lfFaceName, l, n)] = 0;
+  dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)lpelf->lfFaceName, (unsigned) l); // convert the string
+  n[dstlen] = 0;
+  for (int i=0; i<FL_FREE_FONT; i++) // skip if one of our built-in fonts
+    if (!strcmp(Fl::get_font_name((Fl_Font)i),n)) {free(n);return 1;}
+  char buffer[LF_FACESIZE + 1];
+  strcpy(buffer+1, n);
+  buffer[0] = ' '; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  if (lpelf->lfWeight <= 400)
+    buffer[0] = 'B', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  buffer[0] = 'I'; Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  if (lpelf->lfWeight <= 400)
+    buffer[0] = 'P', Fl::set_font((Fl_Font)(fl_free_font++), fl_strdup(buffer));
+  free(n);
+  return 1;
+} /* enumcbw */
+
+Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
+  HDC gc = (HDC)fl_graphics_driver->gc();
+  if (fl_free_font == FL_FREE_FONT) {// if not already been called
+    if (!gc) gc = fl_GetDC(0);
+
+    EnumFontFamiliesW(gc, NULL, (FONTENUMPROCW)enumcbw, xstarname != 0);
+
+  }
+  qsort(fl_fonts + FL_FREE_FONT, fl_free_font - FL_FREE_FONT, sizeof(Fl_Fontdesc), (compare_func_t)sort_fonts_by_name);
+  return (Fl_Font)fl_free_font;
+}
+
+static int cyPerInch;
+
+static int CALLBACK
+
+EnumSizeCbW(CONST LOGFONTW    * /*lpelf*/,
+           CONST TEXTMETRICW *lpntm,
+           DWORD            fontType,
+           LPARAM           /*p*/) {
+  if ((fontType & RASTER_FONTTYPE) == 0) {
+    sizes[0] = 0;
+    nbSize = 1;
+
+    // Scalable font
+    return 0;
+  }
+
+  int add = lpntm->tmHeight - lpntm->tmInternalLeading;
+  add = MulDiv(add, 72, cyPerInch);
+
+  int start = 0;
+  while ((start < nbSize) && (sizes[start] < add)) {
+    start++;
+  }
+
+  if ((start < nbSize) && (sizes[start] == add)) {
+    return 1;
+  }
+
+  for (int i=nbSize; i>start; i--) sizes[i] = sizes[i - 1];
+
+  sizes[start] = add;
+  nbSize++;
+
+  // Stop enum if buffer overflow
+  return nbSize < 128;
+}
+
+int Fl_GDI_Graphics_Driver::get_font_sizes(Fl_Font fnum, int*& sizep) {
+  nbSize = 0;
+  Fl_Fontdesc *s = fl_fonts+fnum;
+  if (!s->name) s = fl_fonts; // empty slot in table, use entry 0
+
+  HDC gc = (HDC)fl_graphics_driver->gc();
+  if (!gc) gc = fl_GetDC(0);
+  cyPerInch = GetDeviceCaps(gc, LOGPIXELSY);
+  if (cyPerInch < 1) cyPerInch = 1;
+
+//  int l = fl_utf_nb_char((unsigned char*)s->name+1, strlen(s->name+1));
+//  unsigned short *b = (unsigned short*) malloc((l + 1) * sizeof(short));
+//  fl_utf2unicode((unsigned char*)s->name+1, l, (wchar_t*)b);
+  const char *nm = (const char*)s->name+1;
+  size_t len = strlen(s->name+1);
+  unsigned l = fl_utf8toUtf16(nm, (unsigned) len, NULL, 0); // Pass NULL to query length required
+  unsigned short *b = (unsigned short*) malloc((l + 1) * sizeof(short));
+  l = fl_utf8toUtf16(nm, (unsigned) len, b, (l+1)); // Now do the conversion
+  b[l] = 0;
+  EnumFontFamiliesW(gc, (WCHAR*)b, (FONTENUMPROCW)EnumSizeCbW, 0);
+  free(b);
+  sizep = sizes;
+  return nbSize;
+}
 
 void Fl_GDI_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
   fl_font(this, fnum, size, 0);
@@ -756,7 +741,7 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
   SetTextColor(gc_, oldColor);
 }
   
-#else
+#else // USE_GDIPLUS
   
 Fl_Font Fl_GDIplus_Graphics_Driver::set_fonts(const char* xstarname) {
   Gdiplus::InstalledFontCollection installedFontCollection;
@@ -883,5 +868,3 @@ void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int
 }
 
 #endif // USE_GDIPLUS
-
-#endif // FL_DOXYGEN
