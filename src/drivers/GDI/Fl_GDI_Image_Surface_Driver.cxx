@@ -73,7 +73,6 @@ Fl_GDI_Image_Surface_Driver::Fl_GDI_Image_Surface_Driver(int w, int h, int high_
 Fl_GDI_Image_Surface_Driver::~Fl_GDI_Image_Surface_Driver() {
 #if USE_GDIPLUS
   if (!external_offscreen) delete (Gdiplus::Bitmap*)offscreen;
-  delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_;
 #else
   if (offscreen && !external_offscreen) DeleteObject(offscreen);
 #endif

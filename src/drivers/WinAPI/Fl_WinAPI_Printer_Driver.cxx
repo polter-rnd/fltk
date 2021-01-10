@@ -361,6 +361,7 @@ int Fl_WinAPI_Printer_Driver::end_page (void)
   if (hPr != NULL) {
 #if USE_GDIPLUS
     delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_;
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = NULL;
 #endif
     prerr = EndPage (hPr);
     if (prerr < 0) {

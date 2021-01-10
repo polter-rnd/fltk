@@ -83,6 +83,7 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() {
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   if (p) free(p);
+  delete graphics_;
   delete brush_;
   delete pen_;
 }
