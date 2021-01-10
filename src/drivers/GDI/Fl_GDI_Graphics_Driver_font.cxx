@@ -428,7 +428,9 @@ double Fl_GDI_Graphics_Driver::width_unscaled(unsigned int c) {
 #endif
   Fl_GDI_Font_Descriptor *fl_fontsize = (Fl_GDI_Font_Descriptor*)font_descriptor();
   unsigned int r;
+#if !USE_GDIPLUS
   SIZE s;
+#endif
   // Special Case Handling of Unicode points over U+FFFF.
   // The logic (below) computes a lookup table for char widths
   // on-the-fly, but the table only covers codepoints up to
