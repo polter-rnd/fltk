@@ -48,10 +48,6 @@ static int fl_angle_ = 0;
 #include <stdlib.h>
 #include <FL/fl_string.h>
 
-// This function fills in the FLTK font table with all the fonts that
-// are found on the X server.  It tries to place the fonts into families
-// and to sort them so the first 4 in a family are normal, bold, italic,
-// and bold italic.
 #include <FL/fl_utf8.h>
 #ifdef __CYGWIN__
 # include <wchar.h>
@@ -432,6 +428,10 @@ enumcbw(CONST LOGFONTW    *lpelf,
   return 1;
 } /* enumcbw */
 
+// This function fills in the FLTK font table with all the fonts that
+// are found on the system.  It tries to place the fonts into families
+// and to sort them so the first 4 in a family are normal, bold, italic,
+// and bold italic.
 Fl_Font Fl_GDI_Graphics_Driver::set_fonts(const char* xstarname) {
   HDC gc = (HDC)fl_graphics_driver->gc();
   if (fl_free_font == FL_FREE_FONT) {// if not already been called
