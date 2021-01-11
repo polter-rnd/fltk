@@ -241,8 +241,8 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   fid = NULL;
   if (fsize > 0) {
     name++;
-    wchar_t wname[100];
-    fl_utf8towc(name, strlen(name), wname, 100);
+    wchar_t wname[LF_FACESIZE];
+    fl_utf8towc(name, strlen(name), wname, LF_FACESIZE);
     Gdiplus::FontFamily fontFamily(wname);
     Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
     if (name[-1] == 'B') style = Gdiplus::FontStyleBold;
