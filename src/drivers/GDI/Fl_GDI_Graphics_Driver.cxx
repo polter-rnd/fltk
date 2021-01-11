@@ -237,11 +237,6 @@ Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscree
   return image;
 }
 
-void Fl_GDIplus_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height) {
-  width *= 2 * scale();
-  height *= 2 * scale();
-}
-
 #else
 
 /*

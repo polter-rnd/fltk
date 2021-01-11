@@ -151,7 +151,6 @@ protected:
   virtual void font_name(int num, const char *name);
   void global_gc();
   virtual void overlay_rect(int x, int y, int w , int h);
-  virtual void cache_size(Fl_Image *img, int &width, int &height);
 };
 
 #else
