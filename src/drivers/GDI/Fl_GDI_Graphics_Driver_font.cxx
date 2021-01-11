@@ -825,7 +825,7 @@ double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   Gdiplus::PointF pointF(0, 0);
   Gdiplus::RectF rect;
   HDC gc;
-  Gdiplus::Graphics *g;
+  Gdiplus::Graphics *g = NULL;
   if (graphics_) g = graphics_;
   else {
     gc = GetDC(0);
