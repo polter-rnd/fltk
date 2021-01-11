@@ -194,7 +194,7 @@ int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
 
 void Fl_GDIplus_Graphics_Driver::restore_clip() {
   fl_clip_state_number++;
-  if (gc_ && graphics_) {
+  if (graphics_) {
     Fl_Region r = rstack[rstackptr];
     if (r) {
        graphics_->SetClip((Gdiplus::Region*)r);

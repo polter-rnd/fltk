@@ -81,13 +81,9 @@ Fl_GDI_Image_Surface_Driver::~Fl_GDI_Image_Surface_Driver() {
 
 
 void Fl_GDI_Image_Surface_Driver::set_current() {
-#if USE_GDIPLUS
-  HDC gc = (HDC)Fl_Graphics_Driver::default_driver().gc();
-#else
-  HDC gc = fl_makeDC((HBITMAP)offscreen);
-#endif
-  driver()->gc(gc);
 #if !USE_GDIPLUS
+  HDC gc = fl_makeDC((HBITMAP)offscreen);
+  driver()->gc(gc);
   SetWindowOrgEx(gc, origin.x, origin.y, NULL);
 #endif
   Fl_Surface_Device::set_current();
@@ -132,9 +128,7 @@ Fl_RGB_Image* Fl_GDI_Image_Surface_Driver::image()
 
 void Fl_GDI_Image_Surface_Driver::end_current()
 {
-#if USE_GDIPLUS
-  driver()->gc(0);
-#else
+#if !USE_GDIPLUS
   HDC gc = (HDC)driver()->gc();
   RestoreDC(gc, _savedc);
   DeleteDC(gc);
