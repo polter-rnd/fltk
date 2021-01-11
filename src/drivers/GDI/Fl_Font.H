@@ -34,6 +34,7 @@ public:
   double *width[64];
   double descent, linespacing;
   Gdiplus::Font *gdiplus_font;
+  bool fixed_width;
 #else
   TEXTMETRIC metr;
   int *width[64];
