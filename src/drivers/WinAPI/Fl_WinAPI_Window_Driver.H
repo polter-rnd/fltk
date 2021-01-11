@@ -41,10 +41,6 @@
  ? where do we handle the interface between OpenGL/DirectX and Cocoa/Windows/Glx?
  */
 
-#if USE_GDIPLUS
-namespace Gdiplus { class Graphics; }
-#endif
-
 struct Fl_Window_Driver::shape_data_type {
   int lw_; ///<  width of shape image
   int lh_; ///<  height of shape image
