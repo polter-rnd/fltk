@@ -906,13 +906,8 @@ void Fl_WinAPI_System_Driver::paste(Fl_Widget &receiver, int clipboard, const ch
         Fl_Surface_Device::push_current(surf);
         fl_color(FL_WHITE);             // draw white background
         fl_rectf(0, 0, width, height);
-<<<<<<< HEAD
         rect.right = LONG(rect.right * scaling);          // apply scaling to the metafile draw operation
         rect.bottom = LONG(rect.bottom * scaling);
-        PlayEnhMetaFile((HDC)fl_graphics_driver->gc(), (HENHMETAFILE)h, &rect); // draw metafile to offscreen buffer
-=======
-        rect.right *= scaling;          // apply scaling to the metafile draw operation
-        rect.bottom *= scaling;
 #if USE_GDIPLUS
         hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->GetHDC();
 #else
@@ -922,7 +917,6 @@ void Fl_WinAPI_System_Driver::paste(Fl_Widget &receiver, int clipboard, const ch
 #if USE_GDIPLUS
         ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->ReleaseHDC(hdc);
 #endif
->>>>>>> Add option to have Windows platform use GDI+ rather that GDI
         image = surf->image();
         Fl_Surface_Device::pop_current();
         delete surf;
@@ -1317,19 +1311,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         RECT r_box;
         if (scale != 1 && GetRgnBox(R, &r_box) != NULLREGION) {
           // add de-scaled update region to i->region in FLTK units
-<<<<<<< HEAD
           r_box.left = LONG(r_box.left / scale);
           r_box.right = LONG(r_box.right / scale);
           r_box.top = LONG(r_box.top / scale);
           r_box.bottom = LONG(r_box.bottom / scale);
-          Fl_Region R3 = CreateRectRgn(r_box.left, r_box.top, r_box.right + 1, r_box.bottom + 1);
-=======
-          r_box.left /= scale;
-          r_box.right /= scale;
-          r_box.top /= scale;
-          r_box.bottom /= scale;
           HRGN R3 = CreateRectRgn(r_box.left, r_box.top, r_box.right + 1, r_box.bottom + 1);
->>>>>>> Windows GDI+: change the declarations of platform-specific types.
           if (!i->region) i->region = R3;
           else {
             CombineRgn((HRGN)(i->region), (HRGN)(i->region), R3, RGN_OR);

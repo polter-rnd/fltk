@@ -14,6 +14,7 @@
 //     https://www.fltk.org/bugs.php
 //
 
+#include <config.h>
 #if !USE_GDIPLUS
 
 #ifndef WIN32_LEAN_AND_MEAN

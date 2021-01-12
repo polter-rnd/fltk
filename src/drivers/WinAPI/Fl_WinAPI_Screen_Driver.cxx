@@ -507,6 +507,7 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
 {
   float s = Fl_Surface_Device::surface()->driver()->scale();
 <<<<<<< HEAD
+<<<<<<< HEAD
   int ws, hs;
 <<<<<<< HEAD
   if (int(s) == s) { ws = w * int(s); hs = h * int(s);}
@@ -515,8 +516,9 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
   if (int(s) == s) { ws = int(w * s); hs = int(h * s);}
 =======
 =======
+=======
+>>>>>>> Windows GDI+: use config.h item rather than compilation option
   int xs = int(X*s), ys = int(Y*s), ws, hs;
->>>>>>> GDI+: fix details of image drawing with fractional scaling factors.
 #if USE_GDIPLUS
   if (!win) { // read from off-screen buffer
     Gdiplus::Bitmap *bitmap = (Gdiplus::Bitmap*)fl_window;
@@ -525,6 +527,7 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
     delete part;
     return image;
   }
+<<<<<<< HEAD
 <<<<<<< HEAD
   ws = w * s; hs = h * s;
 #else
@@ -550,21 +553,26 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
 >>>>>>> Add option to have Windows platform use GDI+ rather that GDI
 =======
 =======
+=======
+>>>>>>> Windows GDI+: use config.h item rather than compilation option
 #endif
-  if (int(s) == s) { ws = w * s; hs = h * s; }
+  if (int(s) == s) { ws = int(w * s); hs = int(h * s); }
   else {
 #if USE_GDIPLUS
     ws = int((X+w)*s) - xs, hs = int((Y+h)*s) - ys;
 #else
-    ws = (w+1)*s; // approximates what Fl_Graphics_Driver::cache_size() does
-    hs = (h+1)*s;
+    ws = int((w+1)*s); // approximates what Fl_Graphics_Driver::cache_size() does
+    hs = int((h+1)*s);
 #endif
     if (ws < 1) ws = 1;
     if (hs < 1) hs = 1;
   }
   return read_win_rectangle_unscaled(xs, ys, ws, hs, win);
+<<<<<<< HEAD
 >>>>>>> GDI+: fix details of image drawing with fractional scaling factors.
 >>>>>>> GDI+: fix details of image drawing with fractional scaling factors.
+=======
+>>>>>>> Windows GDI+: use config.h item rather than compilation option
 }
 
 Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y, int w, int h, Fl_Window *win)
