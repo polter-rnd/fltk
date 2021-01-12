@@ -77,8 +77,8 @@ static Fl_Fontdesc built_in_table[] = {
 {"PTimes New Roman"},
 {" Symbol"},
 #if USE_GDIPLUS
-  {" Georgia"},
-  {"BGeorgia"},
+  {" Lucida Console"},
+  {"BLucida Console"},
 #else
 {" Terminal"},
 {"BTerminal"},
