@@ -825,7 +825,7 @@ double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
   Gdiplus::PointF pointF(0, 0);
   Gdiplus::RectF rect;
-  HDC gc;
+  HDC gc = NULL;
   Gdiplus::Graphics *g = NULL;
   if (graphics_) g = graphics_;
   else {
