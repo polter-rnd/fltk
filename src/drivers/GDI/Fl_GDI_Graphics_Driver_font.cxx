@@ -236,22 +236,6 @@ static void fl_font(Fl_Graphics_Driver *driver, Fl_Font fnum, Fl_Fontsize size
   ) );
 }
 
-#if USE_GDIPLUS
-static bool is_fixed_width(Gdiplus::Font *gdfont) {
-  HDC gc = GetDC(0);
-  Gdiplus::PointF pointF(0, 0);
-  Gdiplus::RectF rect;
-  Gdiplus::Graphics *gscreen = new Gdiplus::Graphics(gc);
-  gscreen->MeasureString(L"MHW_@", -1, gdfont, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
-  double w1 = rect.GetRight() - rect.GetLeft();
-  gscreen->MeasureString(L"iiiii", -1, gdfont, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
-  delete gscreen;
-  ReleaseDC(0, gc);
-  double w2 = rect.GetRight() - rect.GetLeft();
-  return fabs(w1 - w2) < 0.1;
-}
-#endif
-
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
   size = fsize;
 #if USE_GDIPLUS
@@ -268,7 +252,6 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     gdiplus_font = new Gdiplus::Font(&fontFamily, fsize, style, Gdiplus::UnitPixel);
     descent = double(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
     linespacing = double(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
-    fixed_width = is_fixed_width(gdiplus_font);
   } else gdiplus_font = NULL;
 #else
   fid = Fl_GDI_Font_Descriptor::create_gdi_font(name, fsize, fl_angle_);
@@ -835,8 +818,6 @@ double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   g->MeasureString(txt, l, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
   if (!graphics_) {delete g; ReleaseDC(NULL, gc);}
   double width = rect.GetRight() - rect.GetLeft();
-  // is it possible to explain why fixed-width fonts need this ?
-  if (fd->fixed_width) width *= 1.03;
   return width;
 }
 
@@ -845,14 +826,14 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
 //double l = width(str, n);//DEBUG
   Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  Gdiplus::PointF pointF(x -2*size()/14., y - fd->linespacing + fd->descent);
+  Gdiplus::PointF pointF(x, y - fd->linespacing + fd->descent);
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   if (wn >= wstr_len) {
     wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, brush_);
+  graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
 //xyline(x,y,int(x+l));//DEBUG
 }
 
