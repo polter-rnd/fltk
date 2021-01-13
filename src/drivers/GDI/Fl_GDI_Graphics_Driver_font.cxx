@@ -744,20 +744,20 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
   
 #else // USE_GDIPLUS
   
-Fl_Font Fl_GDIplus_Graphics_Driver::set_fonts(const char* xstarname) {
-  Gdiplus::InstalledFontCollection installedFontCollection;
-  WCHAR familyName[LF_FACESIZE];  // enough space for one family name
-  int count = installedFontCollection.GetFamilyCount();
-  Gdiplus::FontFamily *pFontFamily = new Gdiplus::FontFamily[count];
+Fl_Font Fl_GDIplus_Graphics_Driver::set_fonts(const char* unused) {
+  Gdiplus::InstalledFontCollection installed_font_collection;
+  WCHAR family_name[LF_FACESIZE];  // enough space for one family name
+  int count = installed_font_collection.GetFamilyCount();
+  Gdiplus::FontFamily *p_font_family = new Gdiplus::FontFamily[count];
   int found;
-  installedFontCollection.GetFamilies(count, pFontFamily, &found);
+  installed_font_collection.GetFamilies(count, p_font_family, &found);
   for (int j = 0; j < count; ++j) {
-    pFontFamily[j].GetFamilyName(familyName);
+    p_font_family[j].GetFamilyName(family_name);
     char *n = NULL;
-    size_t l = wcslen(familyName);
-    unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)familyName, (unsigned) l) + 1;
+    size_t l = wcslen(family_name);
+    unsigned dstlen = fl_utf8fromwc(n, 0, (wchar_t*)family_name, (unsigned) l) + 1;
     n = (char*) malloc(dstlen);
-    dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)familyName, (unsigned) l);
+    dstlen = fl_utf8fromwc(n, dstlen, (wchar_t*)family_name, (unsigned) l);
     n[dstlen] = 0;
     /*int i;
     for (i=0; i<FL_FREE_FONT; i++) {// skip if one of our built-in fonts
@@ -817,8 +817,7 @@ double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   }
   g->MeasureString(txt, l, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
   if (!graphics_) {delete g; ReleaseDC(NULL, gc);}
-  double width = rect.GetRight() - rect.GetLeft();
-  return width;
+  return rect.GetRight() - rect.GetLeft();
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
@@ -859,12 +858,12 @@ void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(c, n, wstr, wstr_len);
   }
-  Gdiplus::FontFamily fontFamily;
-  fd->gdiplus_font->GetFamily(&fontFamily);
+  Gdiplus::FontFamily font_family;
+  fd->gdiplus_font->GetFamily(&font_family);
   Gdiplus::PointF origin(0,0);
-  Gdiplus::REAL em = fontFamily.GetEmHeight(fd->gdiplus_font->GetStyle());
+  Gdiplus::REAL em = font_family.GetEmHeight(fd->gdiplus_font->GetStyle());
   Gdiplus::GraphicsPath gpath;
-  gpath.AddString((WCHAR*)wstr, wn, &fontFamily, fd->gdiplus_font->GetStyle(), em, origin, Fl_GDIplus_Graphics_Driver::format);
+  gpath.AddString((WCHAR*)wstr, wn, &font_family, fd->gdiplus_font->GetStyle(), em, origin, Fl_GDIplus_Graphics_Driver::format);
   Gdiplus::RectF bounds;
   gpath.GetBounds(&bounds, NULL, NULL);
   w = (bounds.GetRight() - bounds.GetLeft()) * fd->gdiplus_font->GetSize() / em;
