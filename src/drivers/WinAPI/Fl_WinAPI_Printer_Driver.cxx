@@ -293,10 +293,10 @@ int Fl_WinAPI_Printer_Driver::begin_page (void)
 #if USE_GDIPLUS
     int x, y;
     float f = absolute_printable_rect(&x, &y, &w, &h);
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = new Gdiplus::Graphics(hPr);
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(f/50, f/50);
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->TranslateTransform(left_margin, top_margin);
-    initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics( new Gdiplus::Graphics(hPr) );
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(f/50, f/50);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(left_margin, top_margin);
+    initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Save();
 #else
     printable_rect(&w, &h);
     origin(0, 0);
@@ -309,10 +309,10 @@ int Fl_WinAPI_Printer_Driver::begin_page (void)
 void Fl_WinAPI_Printer_Driver::origin (int deltax, int deltay)
 {
 #if USE_GDIPLUS
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Restore(initial_state);
-  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(scale_x_, scale_y_);
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->TranslateTransform(deltax, deltay);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Restore(initial_state);
+  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Save();
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(scale_x_, scale_y_);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(deltax, deltay);
 #else
   SetWindowOrgEx( (HDC)driver()->gc(), - left_margin - deltax, - top_margin - deltay, NULL);
 #endif
@@ -324,9 +324,9 @@ void Fl_WinAPI_Printer_Driver::scale (float scalex, float scaley)
 {
   if (scaley == 0.) scaley = scalex;
 #if USE_GDIPLUS
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Restore(initial_state);
-  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->Save();
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(scalex, scaley);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Restore(initial_state);
+  initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Save();
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(scalex, scaley);
   scale_x_ = scalex; scale_y_ = scaley;
 #else
   int w, h;
@@ -339,7 +339,7 @@ void Fl_WinAPI_Printer_Driver::scale (float scalex, float scaley)
 void Fl_WinAPI_Printer_Driver::rotate (float rot_angle)
 {
 #if USE_GDIPLUS
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->RotateTransform(-rot_angle);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->RotateTransform(-rot_angle);
 #else
   XFORM mat;
   float angle;
@@ -360,8 +360,8 @@ int Fl_WinAPI_Printer_Driver::end_page (void)
   rsult = 0;
   if (hPr != NULL) {
 #if USE_GDIPLUS
-    delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_;
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = NULL;
+    delete ((Fl_GDIplus_Graphics_Driver*)driver())->graphics();
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics(NULL);
 #endif
     prerr = EndPage (hPr);
     if (prerr < 0) {

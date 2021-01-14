@@ -43,6 +43,9 @@ private:
   Gdiplus::GraphicsContainer translate_stack[5];
   void set_current_();
   void cache_rgb_(Fl_RGB_Image *img, bool skip_alpha);
+  Gdiplus::Graphics *graphics_;
+  Gdiplus::SolidBrush *brush_;
+  Gdiplus::Pen *pen_;
 protected:
   HDC gc_;
   int numcount;
@@ -58,9 +61,8 @@ public:
   char can_do_alpha_blending();
   virtual void gc(void *ctxt);
   virtual void *gc() {return gc_;}
-  Gdiplus::Graphics *graphics_;
-  Gdiplus::SolidBrush *brush_;
-  Gdiplus::Pen *pen_;
+  Gdiplus::Graphics *graphics() { return graphics_;}
+  void graphics(Gdiplus::Graphics *g) { graphics_ = g; }
   static Gdiplus::StringFormat *format;
   static void shutdown();
 

@@ -327,8 +327,8 @@ void Fl_WinAPI_Window_Driver::flush_double()
     Gdiplus::Graphics offscreen_graphics((Gdiplus::Bitmap*)other_xid);
     float s = fl_graphics_driver->scale();
     offscreen_graphics.ScaleTransform(s, s);
-    Gdiplus::Graphics *oldg = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_;
-    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = &offscreen_graphics;
+    Gdiplus::Graphics *oldg = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics();
+    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics(&offscreen_graphics);
 #  else
     HDC sgc = fl_gc;
     fl_gc = fl_makeDC((HBITMAP)other_xid);
@@ -338,7 +338,7 @@ void Fl_WinAPI_Window_Driver::flush_double()
     fl_graphics_driver->restore_clip(); // duplicate clip region into new gc
     draw();
 #  if USE_GDIPLUS
-    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_ = oldg;
+    ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics(oldg);
 #  else
     RestoreDC(fl_gc, savedc);
     DeleteDC(fl_gc);
@@ -447,10 +447,10 @@ void Fl_WinAPI_Window_Driver::make_current() {
   fl_graphics_driver->scale(Fl::screen_driver()->scale(screen_num()));
 #if USE_GDIPLUS
   Fl_GDIplus_Graphics_Driver *dr = (Fl_GDIplus_Graphics_Driver*)fl_graphics_driver;
-  if (need_graphics || !dr->graphics_) {
-    delete dr->graphics_;
-    dr->graphics_ = new Gdiplus::Graphics((HDC)fl_graphics_driver->gc());
-    dr->graphics_->ScaleTransform(fl_graphics_driver->scale(), fl_graphics_driver->scale());
+  if (need_graphics || !dr->graphics()) {
+    delete dr->graphics();
+    dr->graphics( new Gdiplus::Graphics((HDC)fl_graphics_driver->gc()) );
+    dr->graphics()->ScaleTransform(fl_graphics_driver->scale(), fl_graphics_driver->scale());
   }
 #endif
 }

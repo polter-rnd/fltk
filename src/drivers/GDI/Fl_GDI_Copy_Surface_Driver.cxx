@@ -66,8 +66,8 @@ Fl_GDI_Copy_Surface_Driver::Fl_GDI_Copy_Surface_Driver(int w, int h) : Fl_Copy_S
     SetTextAlign(gc, TA_BASELINE|TA_LEFT);
     SetBkMode(gc, TRANSPARENT);
 #if USE_GDIPLUS
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = new Gdiplus::Graphics(gc);
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(scaling, scaling);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics( new Gdiplus::Graphics(gc) );
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(scaling, scaling);
 #endif
   }
 }
@@ -101,13 +101,13 @@ Fl_GDI_Copy_Surface_Driver::~Fl_GDI_Copy_Surface_Driver() {
       fl_color(FL_WHITE);    // draw white background
       fl_rectf(0, 0, W, H);
 #if USE_GDIPLUS
-      HDC hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->GetHDC();
+      HDC hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics()->GetHDC();
 #else
       HDC hdc = (HDC)surf->driver()->gc();
 #endif
       PlayEnhMetaFile(hdc, hmf, &rect); // draw metafile to offscreen buffer
 #if USE_GDIPLUS
-      ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->ReleaseHDC(hdc);
+      ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics()->ReleaseHDC(hdc);
       Gdiplus::Bitmap *gdi_bm = (Gdiplus::Bitmap*)surf->offscreen();
       HBITMAP hbm;
       Gdiplus::Status st = gdi_bm->GetHBITMAP(Gdiplus::Color(255, 255, 255), &hbm);

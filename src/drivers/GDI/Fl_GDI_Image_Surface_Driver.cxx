@@ -56,8 +56,8 @@ Fl_GDI_Image_Surface_Driver::Fl_GDI_Image_Surface_Driver(int w, int h, int high_
   } else { offscreen = off; }
   driver(new Fl_GDIplus_Graphics_Driver);
   if (off || !high_res) d = 1;
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_ = new Gdiplus::Graphics((Gdiplus::Bitmap*)offscreen);
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics_->ScaleTransform(d, d);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics( new Gdiplus::Graphics((Gdiplus::Bitmap*)offscreen) );
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(d, d);
   driver()->scale(d);
 #else
   HDC gc = (HDC)Fl_Graphics_Driver::default_driver().gc();

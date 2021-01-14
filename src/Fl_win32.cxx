@@ -909,13 +909,13 @@ void Fl_WinAPI_System_Driver::paste(Fl_Widget &receiver, int clipboard, const ch
         rect.right = LONG(rect.right * scaling);          // apply scaling to the metafile draw operation
         rect.bottom = LONG(rect.bottom * scaling);
 #if USE_GDIPLUS
-        hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->GetHDC();
+        hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics()->GetHDC();
 #else
         hdc = (HDC)fl_graphics_driver->gc();
 #endif
         PlayEnhMetaFile(hdc, (HENHMETAFILE)h, &rect); // draw metafile to offscreen buffer
 #if USE_GDIPLUS
-        ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics_->ReleaseHDC(hdc);
+        ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics()->ReleaseHDC(hdc);
 #endif
         image = surf->image();
         Fl_Surface_Device::pop_current();
@@ -1286,7 +1286,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
           ValidateRgn(hWnd, R);
         }
         Gdiplus::Region *gdi_rgn;
-        Gdiplus::Graphics *gr = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_;
+        Gdiplus::Graphics *gr = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics();
         if (gr && r != NULLREGION) { // non-empty update region
           gr->SetClip(R); // set update region as the graphics' clipping region
           Gdiplus::Rect gdi_rect;
@@ -1635,8 +1635,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
 #if USE_GDIPLUS
         if (wParam != SIZE_MINIMIZED && wParam != SIZE_MAXHIDE) {
-          delete ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics_;
-          ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics_ = NULL;
+          delete ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics();
+          ((Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver())->graphics( NULL);
         }
 #endif
         break;

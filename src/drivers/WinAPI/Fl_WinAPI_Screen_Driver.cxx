@@ -630,7 +630,7 @@ Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y,
   if (win && Fl_Window::current() != win) win->make_current();
   HDC gc =
 #if USE_GDIPLUS
-  win ? ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_->GetHDC() :
+  win ? ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics()->GetHDC() :
 #endif
     (HDC)fl_graphics_driver->gc();
   HDC hdc = CreateCompatibleDC(gc);
@@ -665,7 +665,7 @@ Fl_RGB_Image *Fl_WinAPI_Screen_Driver::read_win_rectangle_unscaled(int X, int Y,
   DeleteObject(hbm);
   delete[] dib;         // delete DIB temporary buffer
 #if USE_GDIPLUS
-  if (win) ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics_->ReleaseHDC(gc);
+  if (win) ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics()->ReleaseHDC(gc);
 #endif
   Fl_RGB_Image *rgb = new Fl_RGB_Image(p, w, h, 3);
   rgb->alloc_array = 1;
