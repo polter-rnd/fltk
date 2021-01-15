@@ -194,7 +194,9 @@ void Fl_GDIplus_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(rgb)) {
     cache(rgb);
   }
+  push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(rgb), XP-cx, YP-cy, rgb->w(), rgb->h(), scale(), graphics_);
+  pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache(Fl_RGB_Image*, fl_uintptr_t &id_, fl_uintptr_t &mask_)
@@ -220,7 +222,9 @@ void Fl_GDIplus_Graphics_Driver::draw_pixmap(Fl_Pixmap *img, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(img)) {
     cache(img);
   }
+  push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(img), XP-cx, YP-cy, img->w(), img->h(), scale(), graphics_);
+  pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
@@ -283,7 +287,9 @@ void Fl_GDIplus_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm, int XP, int YP, int 
   palette->Entries[1] = c.GetValue(); // the foreground color
   Fl_GdiPlusBitmap* gdi_bm = (Fl_GdiPlusBitmap*)*Fl_Graphics_Driver::id(bm);
   gdi_bm->SetPalette(palette);
+  push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img(gdi_bm, XP-cx, YP-cy, bm->w(), bm->h(), scale(), graphics_);
+  pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
