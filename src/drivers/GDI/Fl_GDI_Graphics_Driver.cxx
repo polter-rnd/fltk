@@ -138,12 +138,11 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   if (srcx + w >= off_width) {w = off_width - srcx;}
   if (srcy + h >= off_height) {h = off_height - srcy;}
   if (w <= 0 || h <= 0) return;
-  Gdiplus::Region clip_region;
-  graphics_->GetClip(&clip_region);
-  Gdiplus::RectF rect(x, y, w+0.99, h+0.99);
-  graphics_->SetClip(rect, Gdiplus::CombineModeIntersect);
-  graphics_->DrawImage(((Gdiplus::Bitmap*)bitmap), Gdiplus::RectF(x-srcx, y-srcy, off_width+0.99, off_height+0.99));
-  graphics_->SetClip(&clip_region);
+  Gdiplus::GraphicsState current = graphics_->Save();
+  graphics_->SetClip(Gdiplus::RectF(x, y, w+0.99, h+0.99), Gdiplus::CombineModeIntersect);
+  graphics_->ScaleTransform(1/scale(), 1/scale());
+  graphics_->DrawImage((Gdiplus::Bitmap*)bitmap, Gdiplus::PointF((x-srcx)*scale(), (y-srcy)*scale()));
+  graphics_->Restore(current);
 }
 
 void Fl_GDIplus_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
