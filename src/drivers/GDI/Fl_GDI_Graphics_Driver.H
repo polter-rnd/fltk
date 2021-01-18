@@ -62,7 +62,7 @@ public:
   virtual void gc(void *ctxt);
   virtual void *gc() {return gc_;}
   Gdiplus::Graphics *graphics() { return graphics_;}
-  void graphics(Gdiplus::Graphics *g) { graphics_ = g; }
+  void graphics(Gdiplus::Graphics *g);
   static Gdiplus::StringFormat *format;
   static void shutdown();
 

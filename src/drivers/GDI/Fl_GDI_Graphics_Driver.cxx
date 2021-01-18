@@ -121,6 +121,11 @@ void Fl_GDIplus_Graphics_Driver::global_gc()
   fl_gc = (HDC)gc();
 }
 
+void Fl_GDIplus_Graphics_Driver::graphics(Gdiplus::Graphics *g) {
+  graphics_ = g;
+  if (graphics_) graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
+}
+
 /*
  * This function checks if the version of Windows that we
  * curently run on supports alpha blending for bitmap transfers
