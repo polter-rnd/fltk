@@ -61,7 +61,7 @@ void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
   if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
-   graphics_->FillRectangle(brush_, (x < x1 ? x : x1), y, abs(x1 - x), line_width_);
+   graphics_->FillRectangle(brush_, (x < x1 ? x : x1), y, abs(x1 - x) + 1, line_width_);
   } else { graphics_->DrawLine(pen_, x, y, x1, y); }
 }
 
@@ -76,7 +76,7 @@ void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
   if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
-    graphics_->FillRectangle(brush_, x, (y < y1 ? y : y1), line_width_, abs(y1 - y));
+    graphics_->FillRectangle(brush_, x, (y < y1 ? y : y1), line_width_, abs(y1 - y) + 1);
   } else { graphics_->DrawLine(pen_, x, y, x, y1); }
 }
 
