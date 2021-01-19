@@ -80,8 +80,11 @@ static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use 
 static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, double s, Gdiplus::Graphics *g) {
   int X = int(x*s), Y = int(y*s);
   w = int((x+w)*s) - X, h = int((y+h)*s) - Y;
-  Gdiplus::RectF rect(X/s, Y/s, w/s+0.9, h/s+0.9);
-  g->DrawImage(gdi_img, rect);
+  Gdiplus::Matrix id, current;
+  g->GetTransform(&current);
+  g->SetTransform(&id);
+  g->DrawImage(gdi_img, X-1, Y-1, w+2, h+2); // the external border of the image drawing area
+  g->SetTransform(&current);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
