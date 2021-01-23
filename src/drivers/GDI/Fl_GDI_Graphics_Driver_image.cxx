@@ -82,7 +82,7 @@ static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, i
   int ww = W, hh = H;
   // Apparently, there's a border case to draw and enlarge a one pixel-high image
   // that occurs with the mandelbrot test program.
-  if (h == 1 && s > 1 && gdi_img->GetHeight() < H) {ww += 2; hh += 2;}
+  if (h == 1 && s > 1 && gdi_img->GetHeight() < (unsigned)H) {ww += 2; hh += 2;}
   Gdiplus::RectF rect( X/s, Y/s, ww/s, hh/s );
   g->DrawImage(gdi_img, rect);
 }
