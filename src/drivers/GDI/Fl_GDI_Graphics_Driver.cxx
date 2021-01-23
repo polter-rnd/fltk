@@ -147,11 +147,10 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   if (srcx + w >= off_width) {w = off_width - srcx;}
   if (srcy + h >= off_height) {h = off_height - srcy;}
   if (w <= 0 || h <= 0) return;
-  Gdiplus::GraphicsState current = graphics_->Save();
-  graphics_->SetClip(Gdiplus::RectF(x, y, w+0.99, h+0.99), Gdiplus::CombineModeIntersect);
-  graphics_->ScaleTransform(1/scale(), 1/scale());
-  graphics_->DrawImage((Gdiplus::Bitmap*)bitmap, Gdiplus::PointF((x-srcx)*scale(), (y-srcy)*scale()));
-  graphics_->Restore(current);
+  push_clip(x,y,w,h);
+  Gdiplus::Rect rect(x-srcx, y-srcy, off_width, off_height);
+  graphics_->DrawImage((Gdiplus::Bitmap*)bitmap, rect);
+  pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
