@@ -77,14 +77,14 @@ static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use 
   return rgb;
 }
 
-static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, double s, Gdiplus::Graphics *g) {
-  int X = int(x*s), Y = int(y*s);
-  w = int((x+w)*s) - X, h = int((y+h)*s) - Y;
-  Gdiplus::Matrix id, current;
-  g->GetTransform(&current);
-  g->SetTransform(&id);
-  g->DrawImage(gdi_img, X-1, Y-1, w+2, h+2); // the external border of the image drawing area
-  g->SetTransform(&current);
+static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, Gdiplus::REAL s, Gdiplus::Graphics *g) {
+  int X = int(x*s), Y = int(y*s), W = int((x+w)*s) - X, H = int((y+h)*s) - Y;
+  int ww = W, hh = H;
+  // Apparently, there's a border case to draw and enlarge a one pixel-high image
+  // that occurs with the mandelbrot test program.
+  if (h == 1 && s > 1 && gdi_img->GetHeight() < H) {ww += 2; hh += 2;}
+  Gdiplus::RectF rect( X/s, Y/s, ww/s, hh/s );
+  g->DrawImage(gdi_img, rect);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
@@ -197,9 +197,10 @@ void Fl_GDIplus_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(rgb)) {
     cache(rgb);
   }
-  push_clip(XP, YP, WP, HP);
+  bool need_clip = (cx || cy || WP != rgb->w() || HP != rgb->h());
+  if (need_clip) push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(rgb), XP-cx, YP-cy, rgb->w(), rgb->h(), scale(), graphics_);
-  pop_clip();
+  if (need_clip) pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache(Fl_RGB_Image*, fl_uintptr_t &id_, fl_uintptr_t &mask_)

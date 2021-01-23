@@ -35,9 +35,15 @@ void Fl_GDIplus_Graphics_Driver::point(int x, int y) {
 }
 
 void Fl_GDIplus_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
-  // make pen have a one-pixel width
-  pen_->SetWidth(1/scale());
-  loop(x, y, x+w-1, y, x+w-1, y+h-1, x, y+h-1);
+  if (w <=0 || h <=0) return;
+  Gdiplus::REAL s = scale();
+  int X = x*s, Y = y*s, R = int((x+w-1)*s), B = int((y+h-1)*s);
+  Gdiplus::Matrix id, current;
+  graphics_->GetTransform(&current);
+  graphics_->SetTransform(&id);
+  pen_->SetWidth(1); // make pen have a one-pixel width
+  loop(X, Y, R, Y, R, B, X, B);
+  graphics_->SetTransform(&current);
   pen_->SetWidth(line_width_);
 }
 
