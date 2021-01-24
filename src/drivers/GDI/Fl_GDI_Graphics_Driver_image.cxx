@@ -83,7 +83,7 @@ static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, i
   // Apparently, there's a border case to draw and enlarge a one pixel-high image
   // that occurs with the mandelbrot test program.
   if (h == 1 && s > 1 && gdi_img->GetHeight() < (unsigned)H) {ww += 2; hh += 2;}
-  Gdiplus::RectF rect( X/s, Y/s, ww/s, hh/s );
+  Gdiplus::RectF rect( X/s, Y/s, (ww+0.51)/s, (hh+0.51)/s );
   g->DrawImage(gdi_img, rect);
 }
 
@@ -226,9 +226,10 @@ void Fl_GDIplus_Graphics_Driver::draw_pixmap(Fl_Pixmap *img, int XP, int YP, int
   if (!*Fl_Graphics_Driver::id(img)) {
     cache(img);
   }
-  push_clip(XP, YP, WP, HP);
+  bool need_clip = (cx || cy || WP != img->w() || HP != img->h());
+  if (need_clip) push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img((Gdiplus::Bitmap*)*Fl_Graphics_Driver::id(img), XP-cx, YP-cy, img->w(), img->h(), scale(), graphics_);
-  pop_clip();
+  if (need_clip) pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
@@ -291,9 +292,10 @@ void Fl_GDIplus_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm, int XP, int YP, int 
   palette->Entries[1] = c.GetValue(); // the foreground color
   Fl_GdiPlusBitmap* gdi_bm = (Fl_GdiPlusBitmap*)*Fl_Graphics_Driver::id(bm);
   gdi_bm->SetPalette(palette);
-  push_clip(XP, YP, WP, HP);
+  bool need_clip = (cx || cy || WP != bm->w() || HP != bm->h());
+  if (need_clip) push_clip(XP, YP, WP, HP);
   draw_scaled_gdi_img(gdi_bm, XP-cx, YP-cy, bm->w(), bm->h(), scale(), graphics_);
-  pop_clip();
+  if (need_clip) pop_clip();
 }
 
 void Fl_GDIplus_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
