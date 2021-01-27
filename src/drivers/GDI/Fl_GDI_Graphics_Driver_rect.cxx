@@ -35,64 +35,93 @@ void Fl_GDIplus_Graphics_Driver::point(int x, int y) {
 }
 
 void Fl_GDIplus_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
-  if (w <=0 || h <=0) return;
-  Gdiplus::REAL s = scale();
-  int X = x*s, Y = y*s, R = int((x+w-1)*s), B = int((y+h-1)*s);
-  Gdiplus::Matrix id, current;
-  graphics_->GetTransform(&current);
-  graphics_->SetTransform(&id);
-  pen_->SetWidth(1); // make pen have a one-pixel width
-  loop(X, Y, R, Y, R, B, X, B);
-  graphics_->SetTransform(&current);
+  pen_->SetWidth(1/scale()); // make pen have a one-pixel width
+  rect(x,y,w,h);
   pen_->SetWidth(line_width_);
 }
 
 void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
 {
   if (w > 0 && h > 0) {
-    graphics_->DrawRectangle(pen_, x, y, w-1, h-1);
+    float s = scale();
+    Gdiplus::RectF *rect;
+    if (s != int(s)) {
+      pen_->SetWidth(line_width_*floor(s)/s);
+      rect = new Gdiplus::RectF( (int(x*s)+0.5)/s, (int(y*s)+0.5)/s,
+            (int((x+w-1)*s) - int(x*s))/s, (int((y+h-1)*s) - int(y*s))/s);
+    }
+    else rect = new Gdiplus::RectF(x+0.5, y+0.5, w-1, h-1);
+    graphics_->DrawRectangle(pen_, *rect);
+    pen_->SetWidth(line_width_);
+    delete rect;
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::focus_rect(int x, int y, int w, int h) {
   pen_->SetDashStyle(Gdiplus::DashStyleDot);
-  graphics_->DrawRectangle(pen_, x, y, w-1, h-1);
+  rect(x, y, w, h);
   pen_->SetDashStyle(Gdiplus::DashStyleSolid);
 }
 
 void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
   if (w<=0 || h<=0) return;
-  graphics_->FillRectangle(brush_, x, y, w, h);
+  float s = scale();
+  Gdiplus::RectF *rect;
+  if (s != int(s)) rect = new Gdiplus::RectF( int(x*s)/s, int(y*s)/s,
+                        (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s);
+  else rect = new Gdiplus::RectF(x, y, w, h);
+  graphics_->FillRectangle(brush_, *rect);
+  delete rect;
 }
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
-  if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
-   graphics_->FillRectangle(brush_, (x < x1 ? x : x1), y, abs(x1 - x) + 1, line_width_);
-  } else { graphics_->DrawLine(pen_, x, y, x1, y); }
+  float s = scale();
+  int xx = (x < x1 ? x : x1);
+  int xx1 = (x < x1 ? x1 : x);
+  if (s != int(s) && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
+    Gdiplus::RectF rect( int(xx*s)/s, int(y*s)/s,
+                        (int((xx1+1)*s) - int(xx*s))/s,
+                        (int((y+line_width_)*s) - int(y*s))/s);
+    graphics_->FillRectangle(brush_, rect);
+  } else {
+    graphics_->DrawLine(pen_, x-0.f, y+0.5f, x1+1.f, y+0.5f);
+  }
 }
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2) {
-  line(x, y, x1, y, x1, y2);
+  xyline(x, y, x1);
+  yxline(x1, y, y2);
 }
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
-  line(x, y, x1, y, x1, y2);
-  line(x1, y2, x3, y2);
+  xyline(x, y, x1);
+  yxline(x1, y, y2);
+  xyline(x1, y2, x3);
 }
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
+  int yy = (y < y1 ? y : y1);
+  int yy1 = (y < y1 ? y1 : y);
   if (scale() != 1 && pen_->GetDashStyle() == Gdiplus::DashStyleSolid) {
-    graphics_->FillRectangle(brush_, x, (y < y1 ? y : y1), line_width_, abs(y1 - y) + 1);
-  } else { graphics_->DrawLine(pen_, x, y, x, y1); }
+    float s = scale();
+    Gdiplus::RectF rect( int(x*s)/s, int(yy*s)/s,
+                        (int((x+line_width_)*s) - int(x*s))/s,
+                        (int((yy1+1)*s) - int(yy*s))/s);
+    graphics_->FillRectangle(brush_, rect);
+  } else {
+    graphics_->DrawLine(pen_, x+0.5f, y-0.f, x+0.5f, y1+0.5f);
+  }
 }
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
-  line(x, y, x, y1, x2, y1);
+  yxline(x, y, y1);
+  xyline(x, y1, x2);
 }
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
-  line(x, y, x, y1, x2, y1);
-  line(x2, y1, x2, y3);
+  yxline(x, y, y1);
+  xyline(x, y1, x2);
+  yxline(x2, y1, y3);
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
@@ -116,10 +145,22 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
 
 void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
   Gdiplus::GraphicsPath path;
-  Gdiplus::Point gdi2_p[4] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2), Gdiplus::Point(x3, y3)};
-  path.AddLines(gdi2_p, 4);
+  float s=scale();
+  if (s != int(s) && ( (x0 == x3 && x1 == x2 && y0 == y1 && y3 == y2) ||
+      (x0 == x1 && y1 == y2 && x2 == x3 && y3 == y0)) ) { // rectangular loop
+    Gdiplus::PointF gdi2_p[4] = {Gdiplus::PointF( (int(x0*s)+0.5)/s, (int(y0*s)+0.5)/s ),
+      Gdiplus::PointF( (int(x1*s)+0.5)/s, (int(y1*s)+0.5)/s ),
+      Gdiplus::PointF( (int(x2*s)+0.5)/s, (int(y2*s)+0.5)/s ),
+      Gdiplus::PointF( (int(x3*s)+0.5)/s, (int(y3*s)+0.5)/s )};
+    path.AddLines(gdi2_p, 4);
+    pen_->SetWidth(line_width_*floor(s)/s);
+  } else {
+    Gdiplus::PointF gdi2_p[4] = {Gdiplus::PointF(x0+0.5, y0+0.5), Gdiplus::PointF(x1+0.5, y1+0.5), Gdiplus::PointF(x2+0.5, y2+0.5), Gdiplus::PointF(x3+0.5, y3+0.5)};
+    path.AddLines(gdi2_p, 4);
+  }
   path.CloseFigure();
   graphics_->DrawPath(pen_, &path);
+  pen_->SetWidth(line_width_);
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2) {

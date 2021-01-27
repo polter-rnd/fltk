@@ -866,10 +866,15 @@ void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int
   gpath.AddString((WCHAR*)wstr, wn, &font_family, fd->gdiplus_font->GetStyle(), em, origin, Fl_GDIplus_Graphics_Driver::format);
   Gdiplus::RectF bounds;
   gpath.GetBounds(&bounds, NULL, NULL);
-  w = (bounds.GetRight() - bounds.GetLeft()) * fd->gdiplus_font->GetSize() / em;
-  h = (bounds.GetBottom() - bounds.GetTop()) * fd->gdiplus_font->GetSize() / em;
-  dx = bounds.GetLeft() * fd->gdiplus_font->GetSize() / em + 1;
-  dy = bounds.GetTop() * fd->gdiplus_font->GetSize() / em - fd->linespacing + fd->descent;
+  em /= fd->gdiplus_font->GetSize();
+  float fw = (bounds.GetRight() - bounds.GetLeft()) / em;
+  float fh = (bounds.GetBottom() - bounds.GetTop()) / em;
+  float fleft = bounds.GetLeft() / em;
+  float ftop = bounds.GetTop() / em;
+  dx = floor(fleft);
+  w = ceil(fleft+fw) - dx;
+  h = ceil(ftop+fh) - floor(ftop);
+  dy = floor(ftop) - fd->linespacing + fd->descent;
 }
 
 #endif // USE_GDIPLUS

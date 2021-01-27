@@ -61,8 +61,10 @@ public:
   char can_do_alpha_blending();
   virtual void gc(void *ctxt);
   virtual void *gc() {return gc_;}
-  Gdiplus::Graphics *graphics() { return graphics_;}
+  Gdiplus::Graphics *graphics() {return graphics_;}
   void graphics(Gdiplus::Graphics *g);
+  Gdiplus::SolidBrush *brush() {return brush_;};
+  Gdiplus::Pen *pen() {return pen_;};
   static Gdiplus::StringFormat *format;
   static void shutdown();
 
