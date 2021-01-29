@@ -73,6 +73,7 @@ void
 Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() {
   mask_bitmap_ = NULL;
   gc_ = NULL;
+  line_width_ = 1;
   p_size = 0;
   p = NULL;
   graphics_ = NULL;
