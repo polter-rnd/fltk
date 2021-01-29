@@ -174,6 +174,11 @@ void Fl_GDIplus_Graphics_Driver::fixloop() {  // remove equal points from closed
 }
 
 Fl_Region Fl_GDIplus_Graphics_Driver::XRectangleRegion(int x, int y, int w, int h) {
+  float s = scale();
+  if (s != int(s)) {
+    return new Gdiplus::Region(Gdiplus::RectF(int(x*s)/s, int(y*s)/s,
+          (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s));
+  }
   return new Gdiplus::Region(Gdiplus::Rect(x,y,w,h));
 }
 
