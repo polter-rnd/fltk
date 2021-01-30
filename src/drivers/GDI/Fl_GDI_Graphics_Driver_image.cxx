@@ -79,10 +79,15 @@ static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use 
 
 static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, Gdiplus::REAL s, Gdiplus::Graphics *g) {
   int X = int(x*s), Y = int(y*s), W = int((x+w)*s) - X, H = int((y+h)*s) - Y;
-  // Apparently, there's a border case to draw and enlarge a one pixel-high image
-  // that occurs with the mandelbrot test program.
-  if (h == 1 && s > 1 && gdi_img->GetHeight() < (unsigned)H) {W += 2; H += 2;}
-  g->DrawImage(gdi_img, X/s, Y/s, W/s, H/s);
+  // The goal here is to draw gdi_img exactly to rectangle X,Y,W,H (in graphics unit).
+  // The values of W and H need to be increased in some cases to reach that goal.
+  // Some extra muddling seem necessary when gdi_img's height = 1, as occurs in test/mandelbrot.
+  float gdi_scale = float(H)/gdi_img->GetHeight();
+  float gdi_scaleW = float(W)/gdi_img->GetWidth();
+  if (gdi_scaleW > gdi_scale) gdi_scale = gdi_scaleW;
+  int delta = gdi_scale/2;
+  if (s > 2 && gdi_img->GetHeight() == 1) delta++; // extra muddling
+  g->DrawImage(gdi_img, X/s, Y/s, (W+delta)/s, (H+delta)/s);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
