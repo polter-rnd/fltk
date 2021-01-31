@@ -79,7 +79,8 @@ static Fl_RGB_Image* innards(const uchar *buf, // source pixels, or NULL to use 
 
 static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, int h, Gdiplus::REAL s, Gdiplus::Graphics *g) {
   int X = int(x*s), Y = int(y*s), W = int((x+w)*s) - X, H = int((y+h)*s) - Y;
-  // The goal here is to draw gdi_img exactly to rectangle X,Y,W,H (in graphics unit).
+  // The goal here is to draw gdi_img exactly to rectangle X,Y,W,H (in graphics unit)
+  // whatever the size of the source image.
   // The values of W and H need to be increased in some cases to reach that goal.
   // Some extra muddling seem necessary when gdi_img's height = 1, as occurs in test/mandelbrot.
   float gdi_scale = float(H)/gdi_img->GetHeight();
