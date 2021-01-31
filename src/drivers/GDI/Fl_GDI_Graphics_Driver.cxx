@@ -141,15 +141,16 @@ char Fl_GDIplus_Graphics_Driver::can_do_alpha_blending() {
 }
 
 void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_Offscreen bitmap, int srcx, int srcy) {
+  float s = scale();
   if (srcx < 0) {w += srcx; x -= srcx; srcx = 0;}
   if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
-  int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth()/scale();
-  int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight()/scale();
-  if (srcx + w >= off_width) {w = off_width - srcx;}
-  if (srcy + h >= off_height) {h = off_height - srcy;}
+  int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth();
+  int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight();
+  if (int((srcx + w)*s) > off_width) {w = off_width/s - srcx;}
+  if (int((srcy + h)*s) > off_height) {h = off_height/s - srcy;}
   if (w <= 0 || h <= 0) return;
   push_clip(x,y,w,h);
-  Gdiplus::Rect rect(x-srcx, y-srcy, off_width, off_height);
+  Gdiplus::RectF rect((int(x-srcx)*s)/s, (int(y-srcy)*s)/s, off_width/s, off_height/s);
   graphics_->DrawImage((Gdiplus::Bitmap*)bitmap, rect);
   pop_clip();
 }
