@@ -31,7 +31,9 @@
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::point(int x, int y) {
-  graphics_->FillRectangle(brush_, x, y, 1, 1);
+  float s = scale();
+  float point_size = (s >= 1 ? int(s)/s : 1/s);
+  graphics_->FillRectangle(brush_, int(x*s)/s, int(y*s)/s, point_size, point_size);
 }
 
 void Fl_GDIplus_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
