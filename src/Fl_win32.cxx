@@ -1272,30 +1272,25 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
 
         // We need to merge Windows' damage into FLTK's damage.
-        HRGN R = CreateRectRgn(0, 0, 0, 0);
-        int r = GetUpdateRgn(hWnd, R, 0); // R, the update GDI region is in drawing units
-        if (r == NULLREGION && !redraw_whole_window) {
-          DeleteObject(R);
-          break;
-        }
         
 #if USE_GDIPLUS
+        RECT update_rect;
+        GetUpdateRect(hWnd, &update_rect, FALSE); // in drawing units
+        bool empty = IsRectEmpty(&update_rect);
+        if ( empty && !redraw_whole_window ) {
+          break;
+        }
         if (window->type() == FL_DOUBLE_WINDOW)
           ValidateRgn(hWnd, 0);
-        else {
-          ValidateRgn(hWnd, R);
+        else if (!empty) {
+          ValidateRect(hWnd, &update_rect);
         }
         Gdiplus::Region *gdi_rgn;
-        Gdiplus::Graphics *gr = ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics();
-        if (gr && r != NULLREGION) { // non-empty update region
-          gr->SetClip(R); // set update region as the graphics' clipping region
-          Gdiplus::Rect gdi_rect;
-          gr->GetClipBounds(&gdi_rect); // in FLTK units
-          gr->ResetClip(); // the clipping region is handled later by FLTK
-          if (scale != 1) gdi_rect.Inflate(1, 1);
-          gdi_rgn = new Gdiplus::Region(gdi_rect);
+        if (!empty) { // non-empty update region
+          int X = update_rect.left/scale, Y = update_rect.top/scale; // in FLTK units
+          int W = int(update_rect.right/scale) - X + 1, H = int(update_rect.bottom/scale) - Y + 1;
+          gdi_rgn = (Gdiplus::Region*)((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->XRectangleRegion(X, Y, W, H);
         } else { gdi_rgn = new Gdiplus::Region(); gdi_rgn->MakeEmpty(); }
-        DeleteObject(R);
         if (i->region) {
           // Also tell Windows that we are drawing someplace else as well...
           ((Gdiplus::Region*)i->region)->Union(gdi_rgn);
@@ -1305,6 +1300,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
 
 #else
+        HRGN R = CreateRectRgn(0, 0, 0, 0);
+        int r = GetUpdateRgn(hWnd, R, 0); // R, the update GDI region is in drawing units
+        if (r == NULLREGION && !redraw_whole_window) {
+          DeleteObject(R);
+          break;
+        }
         // convert i->region in FLTK units to R2 in drawing units
         HRGN R2 = Fl_GDI_Graphics_Driver::scale_region((HRGN)(i->region), scale, NULL);
 
