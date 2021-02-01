@@ -215,10 +215,8 @@ int Fl_GDIplus_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int
   if (!r) return 0;
   // The win32 API makes no distinction between partial and complete
   // intersection, so we have to check for partial intersection ourselves.
-  // However, given that the regions may be composite, we have to do
-  // some voodoo stuff...
   Gdiplus::Region* rr = (Gdiplus::Region*)XRectangleRegion(x,y,w,h);
-  Gdiplus::Region* temp = (Gdiplus::Region*)XRectangleRegion(x,y,w,h);//CreateRectRgn(0,0,0,0);
+  Gdiplus::Region* temp = (Gdiplus::Region*)XRectangleRegion(x,y,w,h);
   int ret;
   temp->Intersect(r);
   if (temp->IsEmpty(graphics_)) { // disjoint
@@ -229,8 +227,8 @@ int Fl_GDIplus_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int
   } else {      // partial intersection
     Gdiplus::Rect rect;
     temp->GetBounds(&rect, graphics_);
-    Gdiplus::Size s; rect.GetSize(&s);
-    X = rect.GetLeft(); Y = rect.GetTop(); W = s.Width; H = s.Height;
+    X = rect.GetLeft(); Y = rect.GetTop();
+    W = int(rect.GetRight()) - X + 1; H = int(rect.GetBottom()) - Y + 1;
     ret = 1;
   }
   delete temp;
