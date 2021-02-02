@@ -146,8 +146,8 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
   int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth();
   int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight();
-  if (int((srcx + w)*s) > off_width) {w = off_width/s - srcx;}
-  if (int((srcy + h)*s) > off_height) {h = off_height/s - srcy;}
+  if (int((srcx + w)*s) > off_width) {w = ceil(off_width/s) - srcx;}
+  if (int((srcy + h)*s) > off_height) {h = ceil(off_height/s) - srcy;}
   if (w <= 0 || h <= 0) return;
   push_clip(x,y,w,h);
   Gdiplus::RectF rect((int(x-srcx)*s)/s, (int(y-srcy)*s)/s, off_width/s, off_height/s);
