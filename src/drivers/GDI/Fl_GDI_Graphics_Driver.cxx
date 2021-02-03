@@ -219,12 +219,16 @@ void Fl_GDIplus_Graphics_Driver::set_current_() {
 
 void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->DrawArc(pen_, x, y, w, h, -a1, -(a2-a1));
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->FillPie(brush_, x, y, w, h, -a1, -(a2-a1));
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscreen) {

@@ -54,7 +54,9 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
     }
     path.AddLines(gdi2_p, n);
     delete[] gdi2_p;
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_->DrawPath(pen_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
   }
 }
 
@@ -69,7 +71,9 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
     path.AddLines(gdi2_p, n);
     path.CloseFigure();
     delete[] gdi2_p;
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_->DrawPath(pen_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
   }
 }
 
@@ -88,7 +92,9 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_->FillPath(brush_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
   }
 }
 
@@ -124,7 +130,9 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_->FillPath(brush_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
   }
 }
 
@@ -137,12 +145,13 @@ void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
   int h = (int)rint(yt+ry)-lly;
-
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   if (what==POLYGON) {
     graphics_->FillPie(brush_, llx, lly, w, h, 0, 360);
   } else {
     graphics_->DrawArc(pen_, llx, lly, w, h, 0, 360);
   }
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 #else

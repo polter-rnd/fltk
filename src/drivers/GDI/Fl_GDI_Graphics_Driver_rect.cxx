@@ -136,14 +136,18 @@ void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->DrawLine(pen_, x, y, x1, y1);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int y2) {
   Gdiplus::GraphicsPath path;
   Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x, y), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
   path.AddLines(gdi2_p, 3);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->DrawPath(pen_, &path);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2) {
@@ -151,7 +155,9 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
   Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
   path.AddLines(gdi2_p, 3);
   path.CloseFigure();
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->DrawPath(pen_, &path);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 #define fl_min(a,b) (a < b ? a : b)
@@ -169,7 +175,9 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
     Gdiplus::PointF gdi2_p[4] = {Gdiplus::PointF(x0+1-line_width_/2.f, y0+1-line_width_/2.f), Gdiplus::PointF(x1+1-line_width_/2.f, y1+1-line_width_/2.f), Gdiplus::PointF(x2+1-line_width_/2.f, y2+1-line_width_/2.f), Gdiplus::PointF(x3+1-line_width_/2.f, y3+1-line_width_/2.f)};
     path.AddLines(gdi2_p, 4);
     path.CloseFigure();
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_->DrawPath(pen_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
   }
 }
 
@@ -178,7 +186,9 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
   path.AddLine(x0, y0, x1, y1);
   path.AddLine(x1, y1, x2, y2);
   path.CloseFigure();
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->FillPath(brush_, &path);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
@@ -187,7 +197,9 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
   path.AddLine(x1, y1, x2, y2);
   path.AddLine(x2, y2, x3, y3);
   path.CloseFigure();
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->FillPath(brush_, &path);
+  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 // --- clipping
