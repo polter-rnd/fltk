@@ -91,6 +91,11 @@ static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, i
   g->DrawImage(gdi_img, X/s, Y/s, (W+delta)/s, (H+delta)/s);
 }
 
+void Fl_GDIplus_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height) {
+  width = width * scale() + 0.5;
+  height = height * scale() + 0.5;
+}
+
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {
   Fl_RGB_Image *rgb;
   if (d > 0 && l >= 0) {
