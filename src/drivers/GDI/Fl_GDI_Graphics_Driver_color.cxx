@@ -33,41 +33,6 @@
 // FIXME: ... but for now we still have it ...
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
-// Translations to win32 data structures:
-Fl_XMap fl_xmap[256];
-
-Fl_XMap* fl_current_xmap;
-
-HPALETTE fl_palette;
-#if !USE_GDIPLUS
-static HGDIOBJ tmppen=0;
-static HPEN savepen=0;
-#endif
-
-void fl_cleanup_pens(void) {
-#if !USE_GDIPLUS
-  for (int i=0; i<256; i++) {
-    if (fl_xmap[i].pen) DeleteObject(fl_xmap[i].pen);
-  }
-#endif
-}
-
-void fl_save_pen(void) {
-#if !USE_GDIPLUS
-    if(!tmppen) tmppen = CreatePen(PS_SOLID, 1, 0);
-  savepen = (HPEN)SelectObject((HDC)fl_graphics_driver->gc(), tmppen);
-#endif
-}
-
-void fl_restore_pen(void) {
-#if !USE_GDIPLUS
-  if (savepen) SelectObject((HDC)fl_graphics_driver->gc(), savepen);
-    DeleteObject(tmppen);
-    tmppen = 0;
-    savepen = 0;
-#endif
-}
-
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::color(Fl_Color i) {
@@ -76,8 +41,6 @@ void Fl_GDIplus_Graphics_Driver::color(Fl_Color i) {
     color((uchar)(rgb >> 24), (uchar)(rgb >> 16), (uchar)(rgb >> 8));
   } else {
     Fl_Graphics_Driver::color(i);
-    Fl_XMap &xmap = fl_xmap[i];
-    fl_current_xmap = &xmap;
     unsigned c = fl_cmap[i];
     Gdiplus::Color gdi_c(255, uchar(c>>24), uchar(c>>16), uchar(c>>8));
     brush_->SetColor(gdi_c);
@@ -86,27 +49,51 @@ void Fl_GDIplus_Graphics_Driver::color(Fl_Color i) {
 }
 
 void Fl_GDIplus_Graphics_Driver::color(uchar r, uchar g, uchar b) {
-  static Fl_XMap xmap;
   brush_->SetColor(Gdiplus::Color(255, r, g, b));
   pen_->SetColor(Gdiplus::Color(255, r, g, b));
   Fl_Graphics_Driver::color( fl_rgb_color(r, g, b) );
-  fl_current_xmap = &xmap;
 }
 
 
 void Fl_GDIplus_Graphics_Driver::free_color(Fl_Color i, int overlay) {
   if (overlay) return; // do something about GL overlay?
-  //clear_xmap(fl_xmap[i]);
 }
 
 void Fl_GDIplus_Graphics_Driver::set_color(Fl_Color i, unsigned c) {
   if (fl_cmap[i] != c) {
-    //clear_xmap(fl_xmap[i]);
     fl_cmap[i] = c;
   }
 }
 
-#else
+#else // USE_GDIPLUS
+
+// Translations to win32 data structures:
+Fl_XMap fl_xmap[256];
+
+Fl_XMap* fl_current_xmap;
+
+HPALETTE fl_palette;
+
+static HGDIOBJ tmppen=0;
+static HPEN savepen=0;
+
+void fl_cleanup_pens(void) {
+  for (int i=0; i<256; i++) {
+    if (fl_xmap[i].pen) DeleteObject(fl_xmap[i].pen);
+  }
+}
+
+void fl_save_pen(void) {
+  if(!tmppen) tmppen = CreatePen(PS_SOLID, 1, 0);
+  savepen = (HPEN)SelectObject((HDC)fl_graphics_driver->gc(), tmppen);
+}
+
+void fl_restore_pen(void) {
+  if (savepen) SelectObject((HDC)fl_graphics_driver->gc(), savepen);
+    DeleteObject(tmppen);
+    tmppen = 0;
+    savepen = 0;
+}
 
 static void clear_xmap(Fl_XMap& xmap) {
   if (xmap.pen) {
@@ -291,6 +278,6 @@ fl_select_palette(void)
   return fl_palette;
 }
 
-#endif
+#endif // USE_COLORMAP
 
-#endif
+#endif // USE_GDIPLUS

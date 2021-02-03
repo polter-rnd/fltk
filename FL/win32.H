@@ -66,4 +66,12 @@ extern FL_EXPORT MSG fl_msg;
 extern FL_EXPORT HDC fl_GetDC(Window);
 extern FL_EXPORT HDC fl_makeDC(HBITMAP);
 
+namespace Gdiplus {
+  class Graphics; class Pen; class SolidBrush; class Color;
+}
+extern FL_EXPORT Gdiplus::Graphics *fl_gdiplus_graphics();
+extern FL_EXPORT Gdiplus::Color fl_gdiplus_RGBA();
+extern FL_EXPORT Gdiplus::Pen *fl_gdiplus_pen();
+extern FL_EXPORT Gdiplus::SolidBrush* fl_gdiplus_brush();
+
 #endif // FL_DOXYGEN

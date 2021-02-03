@@ -551,34 +551,47 @@ window handle, or \c NULL if not found. This function uses
 a cache so it is slightly faster than iterating through the
 windows yourself.
 
-\subsection osissues_win32_gdi Drawing Things Using the Windows GDI
+\subsection osissues_win32_gdi Drawing Things Using the Windows GDI/GDI+
 
 When the virtual function Fl_Widget::draw() is
 called, FLTK stores all the extra arguments you need to
-make a proper GDI call in some global variables:
+make a proper GDI/GDI+ call in some global variables:
 
 \code
 extern HINSTANCE fl_display;
 extern HWND fl_window;
+// if using GDI :
 extern HDC fl_gc;
 COLORREF fl_RGB();
 HPEN fl_pen();
 HBRUSH fl_brush();
+// if using GDI+ :
+#include <gdiplus.h>
+Gdiplus::Graphics *fl_gdiplus_graphics();
+Gdiplus::Color fl_gdiplus_RGBA();
+Gdiplus::Pen *fl_gdiplus_pen();
+Gdiplus::SolidBrush* fl_gdiplus_brush();
 \endcode
 
 These global variables are set before Fl_Widget::draw() is called, or by
 Fl_Window::make_current().
-You can refer to them when needed to produce GDI calls, but don't
-attempt to change them. The functions return GDI objects for
-the current color set by
-\ref drawing_colors "fl_color()"
-and are created as
-needed and cached. A typical GDI drawing call is written like
-this:
+You can refer to them when needed to produce GDI or GDI+ calls, but don't
+attempt to change them. The functions return GDI or GDI+ objects for
+the current color set by \ref drawing_colors "fl_color()"
+and are created as needed and cached.
+
+A typical GDI drawing call is written like this:
 
 \code
 DrawSomething(fl_gc, ..., fl_brush());
 \endcode
+
+Typical GDI+ drawing calls are written like this:
+\code
+fl_gdiplus_graphics()->DrawSomething(fl_gdiplus_pen(), …);
+fl_gdiplus_graphics()->FillSomething(fl_gdiplus_brush(), …);
+\endcode
+
 
 It may also be useful to refer to Fl_Window::current()
 to get the window's size or position.

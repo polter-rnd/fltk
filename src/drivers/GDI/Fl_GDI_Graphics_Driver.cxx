@@ -258,6 +258,24 @@ Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscree
   return image;
 }
 
+Gdiplus::Graphics *fl_gdiplus_graphics() {
+  return ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics();
+}
+
+Gdiplus::Color fl_gdiplus_RGBA() {
+  Gdiplus::Color c;
+  ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->pen()->GetColor(&c);
+  return c;
+}
+
+Gdiplus::Pen *fl_gdiplus_pen() {
+  return ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->pen();
+}
+
+Gdiplus::SolidBrush* fl_gdiplus_brush() {
+  return ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->brush();
+}
+
 #else
 
 /*
