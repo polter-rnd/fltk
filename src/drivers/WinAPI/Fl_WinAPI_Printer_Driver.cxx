@@ -63,7 +63,7 @@ Fl_WinAPI_Printer_Driver::Fl_WinAPI_Printer_Driver(void) : Fl_Paged_Device() {
   hPr = NULL;
 #if USE_GDIPLUS
   scale_x_ = scale_y_ = 1;
-  driver(new Fl_GDIplus_Graphics_Driver);
+  driver(new Fl_GDIplus_Printer_Graphics_Driver);
 #else
   driver(new Fl_GDI_Printer_Graphics_Driver);
 #endif

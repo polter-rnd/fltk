@@ -158,6 +158,11 @@ protected:
   virtual void cache_size(Fl_Image* img, int &width, int &height);
 };
 
+class Fl_GDIplus_Printer_Graphics_Driver : public Fl_GDIplus_Graphics_Driver {
+public:
+  virtual int has_feature(driver_feature mask) {return mask & (NATIVE | PRINTER);}
+};
+
 #else
 
 class FL_EXPORT Fl_GDI_Graphics_Driver : public Fl_Scalable_Graphics_Driver {
