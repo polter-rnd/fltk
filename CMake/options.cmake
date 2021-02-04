@@ -55,10 +55,10 @@ endif (UNIX)
 if (WIN32)
   option (OPTION_USE_GDIPLUS "use GDI+ rather than GDI for Windows platform" OFF)
   if (OPTION_USE_GDIPLUS)
-    set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lgdiplus" CACHE
-       STRING "Libraries for C++ applications" FORCE)
     set (USE_GDIPLUS TRUE)
-    list (APPEND FLTK_LDLIBS "-lgdiplus")
+    if (NOT MSVC)
+      list (APPEND FLTK_LDLIBS "-lgdiplus")
+    endif (NOT MSVC)
   endif (OPTION_USE_GDIPLUS)
 endif (WIN32)
 

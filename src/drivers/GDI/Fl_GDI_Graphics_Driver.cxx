@@ -23,7 +23,7 @@
 #include <FL/math.h>
 #include "../../Fl_Screen_Driver.H"
 #ifdef _MSC_VER
-#pragma comment (lib,"Gdiplus.lib")
+// #pragma comment (lib,"Gdiplus.lib")
 #endif
 
 /* Reference to the current device context

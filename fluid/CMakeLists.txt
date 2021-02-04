@@ -71,6 +71,10 @@ endif (APPLE AND (NOT OPTION_APPLE_X11) AND (NOT OPTION_APPLE_SDL))
 
 target_link_libraries(fluid fltk fltk_images fltk_forms)
 
+if (USE_GDIPLUS)        # can only be true on Windows
+  target_link_libraries (fluid gdiplus)
+endif (USE_GDIPLUS)
+
 # install fluid
 
 if (APPLE AND (NOT OPTION_APPLE_X11) AND (NOT OPTION_APPLE_SDL))

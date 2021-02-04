@@ -115,6 +115,10 @@ macro (CREATE_EXAMPLE NAME SOURCES LIBRARIES)
   set_target_properties   (${TARGET_NAME} PROPERTIES OUTPUT_NAME ${NAME})
   target_link_libraries   (${TARGET_NAME} ${LIBRARIES})
 
+  if (USE_GDIPLUS)        # can only be true on Windows
+    target_link_libraries (${TARGET_NAME} gdiplus)
+  endif (USE_GDIPLUS)
+
   if (ICON_PATH)
     set_target_properties (${TARGET_NAME} PROPERTIES MACOSX_BUNDLE_ICON_FILE ${ICON_NAME})
     set_target_properties (${TARGET_NAME} PROPERTIES RESOURCE ${ICON_PATH})
