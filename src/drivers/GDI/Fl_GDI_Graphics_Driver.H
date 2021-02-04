@@ -33,7 +33,10 @@
   This class is implemented only on the Windows platform.
 */
 #if USE_GDIPLUS
-#include <gdiplus.h>
+#  if defined(_MSC_VER)
+#    include <objidl.h>
+#  endif
+#  include <gdiplus.h>
 
 class FL_EXPORT Fl_GDIplus_Graphics_Driver : public Fl_Graphics_Driver {
 private:

@@ -24,7 +24,7 @@
 
 #include <config.h>
 #if USE_GDIPLUS
-#include <gdiplus.h>
+#  include "Fl_GDI_Graphics_Driver.H"
 #endif
 
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {

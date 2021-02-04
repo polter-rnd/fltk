@@ -20,7 +20,11 @@
 #include <FL/Fl.H>
 #include <FL/platform.H>
 #include <FL/fl_draw.H>
+#include <FL/math.h>
 #include "../../Fl_Screen_Driver.H"
+#ifdef _MSC_VER
+#pragma comment (lib,"Gdiplus.lib")
+#endif
 
 /* Reference to the current device context
  For back-compatibility only. The preferred procedure to get this reference is

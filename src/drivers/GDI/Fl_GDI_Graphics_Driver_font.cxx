@@ -43,6 +43,7 @@ static int fl_angle_ = 0;
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
 #include <FL/platform.H>
+#include <FL/math.h>
 #include "Fl_Font.H"
 
 #include <stdio.h>
