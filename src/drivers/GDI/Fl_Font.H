@@ -24,15 +24,15 @@
 
 #include <config.h>
 #if USE_GDIPLUS
-namespace Gdiplus { class Font; }
+#include <gdiplus.h>
 #endif
 
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {
 public:
   HFONT fid;
 #if USE_GDIPLUS
-  double *width[64];
-  double descent, linespacing;
+  Gdiplus::REAL *width[64];
+  float descent, linespacing;
   Gdiplus::Font *gdiplus_font;
 #else
   TEXTMETRIC metr;

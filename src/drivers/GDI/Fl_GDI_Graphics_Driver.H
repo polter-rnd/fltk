@@ -43,6 +43,7 @@ private:
   Gdiplus::GraphicsContainer translate_stack[5];
   void set_current_();
   void cache_rgb_(Fl_RGB_Image *img, bool skip_alpha);
+  void do_draw_(const char* str, int n, float x, float y);
   Gdiplus::Graphics *graphics_;
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Pen *pen_;
@@ -71,7 +72,7 @@ public:
   // --- bitmap stuff
   void delete_bitmask(Fl_Bitmask bm);
   virtual void draw(const char* str, int n, int x, int y);
-  virtual void draw(const char *str, int nChars, float x, float y) {return draw(str, nChars, int(x), int(y));}
+  virtual void draw(const char *str, int n, float x, float y);
   virtual void draw(int angle, const char *str, int n, int x, int y);
   virtual void rtl_draw(const char* str, int n, int x, int y);
   virtual void font(Fl_Font face, Fl_Fontsize size);
@@ -90,7 +91,7 @@ public:
   void cache(Fl_RGB_Image *img);
   virtual double width(const char *str, int n);
   virtual double width(unsigned int c);
-  double width_wchar(const WCHAR *txt, int l);
+  Gdiplus::REAL width_wchar(const WCHAR *txt, int l);
   void text_extents(const char*, int n, int& dx, int& dy, int& w, int& h);
   int height();
   int descent();

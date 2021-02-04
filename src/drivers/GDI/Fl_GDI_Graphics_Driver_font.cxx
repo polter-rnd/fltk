@@ -250,9 +250,10 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
     else if (name[-1] == 'I') style = Gdiplus::FontStyleItalic;
     else if (name[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
     gdiplus_font = new Gdiplus::Font(&fontFamily, fsize, style, Gdiplus::UnitPixel);
-    descent = double(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
-    linespacing = double(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
+    descent = float(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
+    linespacing = float(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
   } else gdiplus_font = NULL;
+  memset(width, 0, 64 * sizeof(Gdiplus::REAL*));
 #else
   fid = Fl_GDI_Font_Descriptor::create_gdi_font(name, fsize, fl_angle_);
   angle = fl_angle_;
@@ -260,14 +261,13 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   if (!gc) gc = fl_GetDC(0);
   SelectObject(gc, fid);
   GetTextMetrics(gc, &metr);
+  memset(width, 0, 64 * sizeof(int*));
 #endif // USE_GDIPLUS
 //  BOOL ret = GetCharWidthFloat(fl_gc, metr.tmFirstChar, metr.tmLastChar, font->width+metr.tmFirstChar);
 // ...would be the right call, but is not implemented into Window95! (WinNT?)
   //GetCharWidth(fl_gc, 0, 255, width);
-  int i;
-  memset(width, 0, 64 * sizeof(int*));
 #if HAVE_GL
-  for (i = 0; i < 64; i++) glok[i] = 0;
+  for (int i = 0; i < 64; i++) glok[i] = 0;
 #endif
 }
 
@@ -348,7 +348,7 @@ double
     // Creates a UTF16 string from a UCS code point.
     cc = fl_ucs_to_Utf16(c, u16, 4);
 #if USE_GDIPLUS
-    return this->width_wchar((WCHAR*)u16, cc);
+    return (double)this->width_wchar((WCHAR*)u16, cc);
 #else
     // Make sure the current font is selected before we make the measurement
     SelectObject(gc_, fl_fontsize->fid);
@@ -362,7 +362,7 @@ double
   r = (c & 0xFC00) >> 10;
   if (!fl_fontsize->width[r]) {
 #if USE_GDIPLUS
-    fl_fontsize->width[r] = (double*) malloc(sizeof(double) * 0x0400);
+    fl_fontsize->width[r] = (Gdiplus::REAL*) malloc(sizeof(Gdiplus::REAL) * 0x0400);
 #else
     fl_fontsize->width[r] = (int*) malloc(sizeof(int) * 0x0400);
 #endif
@@ -804,9 +804,8 @@ int Fl_GDIplus_Graphics_Driver::size() {
   return -1;
 }
 
-double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
+Gdiplus::REAL Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  Gdiplus::PointF pointF(0, 0);
   Gdiplus::RectF rect;
   HDC gc = NULL;
   Gdiplus::Graphics *g = NULL;
@@ -815,12 +814,12 @@ double Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
     gc = GetDC(0);
     g = new Gdiplus::Graphics(gc);
   }
-  g->MeasureString(txt, l, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, &rect);
+  g->MeasureString(txt, l, fd->gdiplus_font, Gdiplus::PointF(0, 0), Fl_GDIplus_Graphics_Driver::format, &rect);
   if (!graphics_) {delete g; ReleaseDC(NULL, gc);}
   return rect.GetRight() - rect.GetLeft();
 }
 
-void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
+void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float y) {
   // avoid crash if no font has been set yet
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
 //double l = width(str, n);//DEBUG
@@ -834,6 +833,16 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   }
   graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
 //xyline(x,y,int(x+l));//DEBUG
+}
+
+void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) {
+  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
+  do_draw_(str, n, x, y);
+  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+}
+
+void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
+  do_draw_(str, n, float(x), float(y));
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
