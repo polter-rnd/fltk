@@ -156,7 +156,7 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
 }
 
 void Fl_GDIplus_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
-  ((Gdiplus::Region*)r)->Union(Gdiplus::Rect(X,Y,W,H));
+  ((Gdiplus::Region*)r)->Union((Gdiplus::Region*)XRectangleRegion(X,Y,W,H));
 }
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex0(float x, float y) {
