@@ -129,7 +129,7 @@ void Fl_GDIplus_Graphics_Driver::global_gc()
 void Fl_GDIplus_Graphics_Driver::graphics(Gdiplus::Graphics *g) {
   graphics_ = g;
   if (graphics_) {
-    graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+    graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintClearTypeGridFit);
     // InterpolationModeNearestNeighbor is the only mode to control exact pixel size of scaled image
     graphics_->SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
   }

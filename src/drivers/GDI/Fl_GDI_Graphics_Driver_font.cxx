@@ -837,9 +837,10 @@ void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) {
+  Gdiplus::TextRenderingHint hint = graphics_->GetTextRenderingHint();
   graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
   do_draw_(str, n, x, y);
-  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+  graphics_->SetTextRenderingHint(hint);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
@@ -847,10 +848,11 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
+  Gdiplus::TextRenderingHint hint = graphics_->GetTextRenderingHint();
   Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
   graphics_->TranslateTransform(x, y);
   graphics_->RotateTransform(-angle);
-  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+  graphics_->SetTextRenderingHint(hint);
   do_draw_(str, n, 0.f, 0.f);
   graphics_->EndContainer(contain);
 }
