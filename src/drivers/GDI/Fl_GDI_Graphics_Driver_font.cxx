@@ -850,7 +850,8 @@ void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, 
   Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
   graphics_->TranslateTransform(x, y);
   graphics_->RotateTransform(-angle);
-  draw(str, n, 0, 0);
+  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+  do_draw_(str, n, 0.f, 0.f);
   graphics_->EndContainer(contain);
 }
 

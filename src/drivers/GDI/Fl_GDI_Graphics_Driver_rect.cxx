@@ -47,7 +47,7 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
 {
   if (w > 0 && h > 0) {
     float s = scale();
-    if (s != int(s) && line_width_ == 1) {
+    if (line_width_ == 1) {
       int lwidth = int((y+1)*s) - int(y*s);
       pen_->SetWidth(lwidth/s);
       graphics_->DrawLine(pen_, int(x*s)/s, (int(y*s)+lwidth/2.)/s, (int((x+w)*s) - 0.5)/s, (int(y*s)+lwidth/2.)/s);
@@ -63,6 +63,7 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
       pen_->SetWidth(1);
     }
     else {
+      // this ommits 1 pixel at top-left when lwidth==1
       graphics_->DrawRectangle(pen_, Gdiplus::RectF(x+0.5f, y+0.5f, w-1.f, h-1.f));
     }
   }
@@ -136,9 +137,10 @@ void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  bool AA = !(x == x1 || y == y1);
+  if (AA) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_->DrawLine(pen_, x, y, x1, y1);
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
+  if (AA) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int y2) {
@@ -163,8 +165,8 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
 #define fl_min(a,b) (a < b ? a : b)
 #define fl_max(a,b) (a > b ? a : b)
 void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
-  if (scale() != int(scale()) && ( (x0 == x3 && x1 == x2 && y0 == y1 && y3 == y2) ||
-      (x0 == x1 && y1 == y2 && x2 == x3 && y3 == y0)) && line_width_ == 1) { // rectangular loop
+  if ( (x0 == x3 && x1 == x2 && y0 == y1 && y3 == y2) ||
+      (x0 == x1 && y1 == y2 && x2 == x3 && y3 == y0) ) { // rectangular loop
     int left = fl_min(x0, fl_min(x1, fl_min(x2, x3)));
     int right = fl_max(x0, fl_max(x1, fl_max(x2, x3)));
     int top = fl_min(y0, fl_min(y1, fl_min(y2, y3)));
@@ -192,14 +194,23 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
-  Gdiplus::GraphicsPath path;
-  path.AddLine(x0, y0, x1, y1);
-  path.AddLine(x1, y1, x2, y2);
-  path.AddLine(x2, y2, x3, y3);
-  path.CloseFigure();
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_->FillPath(brush_, &path);
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
+  if ( (x0 == x3 && x1 == x2 && y0 == y1 && y3 == y2) ||
+      (x0 == x1 && y1 == y2 && x2 == x3 && y3 == y0) ) {
+    int left = fl_min(x0, fl_min(x1, fl_min(x2, x3)));
+    int right = fl_max(x0, fl_max(x1, fl_max(x2, x3)));
+    int top = fl_min(y0, fl_min(y1, fl_min(y2, y3)));
+    int bottom = fl_max(y0, fl_max(y1, fl_max(y2, y3)));
+    rectf(left, top, right-left, bottom-top);
+  } else {
+    Gdiplus::GraphicsPath path;
+    path.AddLine(x0, y0, x1, y1);
+    path.AddLine(x1, y1, x2, y2);
+    path.AddLine(x2, y2, x3, y3);
+    path.CloseFigure();
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+    graphics_->FillPath(brush_, &path);
+    graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
+  }
 }
 
 // --- clipping
