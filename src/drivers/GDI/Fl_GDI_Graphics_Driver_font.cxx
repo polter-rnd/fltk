@@ -820,7 +820,7 @@ Gdiplus::REAL Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
   return rect.GetRight() - rect.GetLeft();
 }
 
-void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float y, bool use_format) {
+void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float y) {
   // avoid crash if no font has been set yet
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
 //double l = width(str, n);//DEBUG
@@ -832,30 +832,31 @@ void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  if (use_format)
-    graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
-  else
-    graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, brush_);
+  graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
 //xyline(x,y,int(x+l));//DEBUG
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) {
-  Gdiplus::TextRenderingHint hint = graphics_->GetTextRenderingHint();
-  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
-  do_draw_(str, n, x, y, true);
-  graphics_->SetTextRenderingHint(hint);
+  do_draw_(str, n, x, y);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
-  do_draw_(str, n, float(x), float(y), false);
+  Gdiplus::TextRenderingHint hint = Gdiplus::TextRenderingHintSystemDefault;
+  bool use_ClearType = (size() * scale() >= 14.f);
+  if (use_ClearType) {
+    // empirically, TextRenderingHintClearTypeGridFit vertically rocks text with small fonts (<14)
+    hint = graphics_->GetTextRenderingHint();
+    graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintClearTypeGridFit);
+  }
+  do_draw_(str, n, float(x), float(y));
+  if (use_ClearType) graphics_->SetTextRenderingHint(hint);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
   Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
   graphics_->TranslateTransform(Gdiplus::REAL(x), Gdiplus::REAL(y));
   graphics_->RotateTransform(Gdiplus::REAL(-angle));
-  graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
-  do_draw_(str, n, 0.f, 0.f, true);
+  do_draw_(str, n, 0.f, 0.f);
   graphics_->EndContainer(contain);
 }
 

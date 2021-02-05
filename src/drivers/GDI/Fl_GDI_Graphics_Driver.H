@@ -46,7 +46,7 @@ private:
   Gdiplus::GraphicsContainer translate_stack[5];
   void set_current_();
   void cache_rgb_(Fl_RGB_Image *img, bool skip_alpha);
-  void do_draw_(const char* str, int n, float x, float y, bool use_format);
+  void do_draw_(const char* str, int n, float x, float y);
   Gdiplus::Graphics *graphics_;
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Pen *pen_;
