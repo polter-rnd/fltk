@@ -86,14 +86,14 @@ static void draw_scaled_gdi_img(Gdiplus::Bitmap *gdi_img, int x, int y, int w, i
   float gdi_scale = float(H)/gdi_img->GetHeight();
   float gdi_scaleW = float(W)/gdi_img->GetWidth();
   if (gdi_scaleW > gdi_scale) gdi_scale = gdi_scaleW;
-  int delta = gdi_scale/2;
+  int delta = int(gdi_scale/2);
   if (s > 2 && gdi_img->GetHeight() == 1) delta++; // extra muddling
   g->DrawImage(gdi_img, X/s, Y/s, (W+delta)/s, (H+delta)/s);
 }
 
 void Fl_GDIplus_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height) {
-  width = width * scale() + 0.5;
-  height = height * scale() + 0.5;
+  width = int(width * scale() + 0.5);
+  height = int(height * scale() + 0.5);
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_image(const uchar* buf, int x, int y, int w, int h, int d, int l) {

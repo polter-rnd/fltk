@@ -150,8 +150,8 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
   int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth();
   int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight();
-  if (int((srcx + w)*s) > off_width) {w = ceil(off_width/s) - srcx;}
-  if (int((srcy + h)*s) > off_height) {h = ceil(off_height/s) - srcy;}
+  if (int((srcx + w)*s) > off_width) {w = int(ceil(off_width/s)) - srcx;}
+  if (int((srcy + h)*s) > off_height) {h = int(ceil(off_height/s)) - srcy;}
   if (w <= 0 || h <= 0) return;
   push_clip(x,y,w,h);
   Gdiplus::RectF rect((int(x-srcx)*s)/s, (int(y-srcy)*s)/s, off_width/s, off_height/s);
@@ -169,8 +169,8 @@ void Fl_GDIplus_Graphics_Driver::transformed_vertex0(float x, float y) {
       p_size = p ? 2*p_size : 16;
       p = (POINT*)realloc((void*)p, p_size*sizeof(*p));
     }
-    p[n].x = x;
-    p[n].y = y;
+    p[n].x = LONG(x);
+    p[n].y = LONG(y);
     n++;
   }
 }
@@ -206,7 +206,7 @@ void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y)
 {
   if (translate_stack_depth < translate_stack_max) {
     translate_stack[translate_stack_depth++] = graphics_->BeginContainer();
-    graphics_->TranslateTransform(x, y);
+    graphics_->TranslateTransform(Gdiplus::REAL(x), Gdiplus::REAL(y));
     }
 }
 
@@ -224,14 +224,14 @@ void Fl_GDIplus_Graphics_Driver::set_current_() {
 void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_->DrawArc(pen_, x, y, w, h, -a1, -(a2-a1));
+  graphics_->DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(-(a2-a1)));
   graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 
 void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_->FillPie(brush_, x, y, w, h, -a1, -(a2-a1));
+  graphics_->FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(-(a2-a1)));
   graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
 }
 

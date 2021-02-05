@@ -244,13 +244,13 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   if (fsize > 0) {
     name++;
     wchar_t wname[LF_FACESIZE];
-    fl_utf8towc(name, strlen(name), wname, LF_FACESIZE);
+    fl_utf8towc(name, (unsigned)strlen(name), wname, LF_FACESIZE);
     Gdiplus::FontFamily fontFamily(wname);
     Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
     if (name[-1] == 'B') style = Gdiplus::FontStyleBold;
     else if (name[-1] == 'I') style = Gdiplus::FontStyleItalic;
     else if (name[-1] == 'P') style = Gdiplus::FontStyleBoldItalic;
-    gdiplus_font = new Gdiplus::Font(&fontFamily, fsize, style, Gdiplus::UnitPixel);
+    gdiplus_font = new Gdiplus::Font(&fontFamily, Gdiplus::REAL(fsize), style, Gdiplus::UnitPixel);
     descent = float(fsize * fontFamily.GetCellDescent(style)) / fontFamily.GetEmHeight(style);
     linespacing = float(fsize * fontFamily.GetLineSpacing(style)) / fontFamily.GetEmHeight(style);
   } else gdiplus_font = NULL;
@@ -850,15 +850,15 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
 void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
   Gdiplus::TextRenderingHint hint = graphics_->GetTextRenderingHint();
   Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
-  graphics_->TranslateTransform(x, y);
-  graphics_->RotateTransform(-angle);
+  graphics_->TranslateTransform(Gdiplus::REAL(x), Gdiplus::REAL(y));
+  graphics_->RotateTransform(Gdiplus::REAL(-angle));
   graphics_->SetTextRenderingHint(hint);
   do_draw_(str, n, 0.f, 0.f);
   graphics_->EndContainer(contain);
 }
 
 void Fl_GDIplus_Graphics_Driver::rtl_draw(const char* c, int n, int x, int y) {
-  int l = width(c, n) + .5;
+  int l = int(width(c, n) + .5);
   draw(c, n, x-l, y);
 }
 
@@ -884,10 +884,10 @@ void Fl_GDIplus_Graphics_Driver::text_extents(const char *c, int n, int &dx, int
   float fh = (bounds.GetBottom() - bounds.GetTop()) / em;
   float fleft = bounds.GetLeft() / em;
   float ftop = bounds.GetTop() / em;
-  dx = floor(fleft);
-  w = ceil(fleft+fw) - dx;
-  h = ceil(ftop+fh) - floor(ftop);
-  dy = floor(ftop) - fd->linespacing + fd->descent;
+  dx = int(floor(fleft));
+  w = int(ceil(fleft+fw)) - dx;
+  h = int(ceil(ftop+fh) - floor(ftop));
+  dy = int(floor(ftop) - fd->linespacing + fd->descent);
 }
 
 #endif // USE_GDIPLUS

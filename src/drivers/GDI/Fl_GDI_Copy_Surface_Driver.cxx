@@ -82,10 +82,14 @@ Fl_GDI_Copy_Surface_Driver::~Fl_GDI_Copy_Surface_Driver() {
       // put first the vectorial form of the graphics in the clipboard
       SetClipboardData (CF_ENHMETAFILE, hmf);
       // then put a BITMAP version of the graphics in the clipboard
+<<<<<<< HEAD
       float scaling = driver()->scale();
 <<<<<<< HEAD
       int W = Fl_GDI_Graphics_Driver::floor(width, scaling), H = Fl_GDI_Graphics_Driver::floor(height, scaling);
 =======
+=======
+      float scaling = Fl_Graphics_Driver::default_driver().scale();
+>>>>>>> Windows GDI+: remove many Visual Studio compilation warnings.
       int W = int(width * scaling), H = int(height * scaling);
 <<<<<<< HEAD
 =======

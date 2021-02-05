@@ -223,7 +223,7 @@ void
   physPageSize.x = GetDeviceCaps(hPr, HORZRES);
   physPageSize.y = GetDeviceCaps(hPr, VERTRES);
 #if USE_GDIPLUS
-  f = physPageSize.y;
+  f = int(physPageSize.y);
 #endif
   DPtoLP(hPr, &physPageSize, 1);
 #if USE_GDIPLUS
@@ -256,10 +256,10 @@ void Fl_WinAPI_Printer_Driver::margins(int *left, int *top, int *right, int *bot
   int x = 0, y = 0, w = 0, h = 0;
   absolute_printable_rect(&x, &y, &w, &h);
 #if USE_GDIPLUS
-  if (left) *left = x / scale_x_;
-  if (top) *top = y / scale_y_;
-  if (right) *right = x / scale_x_;
-  if (bottom) *bottom = y / scale_y_;
+  if (left) *left = int(x / scale_x_);
+  if (top) *top = int(y / scale_y_);
+  if (right) *right = int(x / scale_x_);
+  if (bottom) *bottom = int(y / scale_y_);
 #else
   if (left) *left = x;
   if (top) *top = y;
@@ -273,7 +273,7 @@ int Fl_WinAPI_Printer_Driver::printable_rect(int *w, int *h)
   int x, y;
   absolute_printable_rect(&x, &y, w, h);
 #if USE_GDIPLUS
-  *w /= scale_x_; *h /= scale_y_;
+  *w = int((*w)/scale_x_); *h = int((*h)/scale_y_);
 #endif
   return 0;
 }
@@ -295,7 +295,7 @@ int Fl_WinAPI_Printer_Driver::begin_page (void)
     float f = absolute_printable_rect(&x, &y, &w, &h);
     ((Fl_GDIplus_Graphics_Driver*)driver())->graphics( new Gdiplus::Graphics(hPr) );
     ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(f/50, f/50);
-    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(left_margin, top_margin);
+    ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(Gdiplus::REAL(left_margin), Gdiplus::REAL(top_margin));
     initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Save();
 #else
     printable_rect(&w, &h);
@@ -312,7 +312,7 @@ void Fl_WinAPI_Printer_Driver::origin (int deltax, int deltay)
   ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Restore(initial_state);
   initial_state = ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->Save();
   ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->ScaleTransform(scale_x_, scale_y_);
-  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(deltax, deltay);
+  ((Fl_GDIplus_Graphics_Driver*)driver())->graphics()->TranslateTransform(Gdiplus::REAL(deltax), Gdiplus::REAL(deltay));
 #else
   SetWindowOrgEx( (HDC)driver()->gc(), - left_margin - deltax, - top_margin - deltay, NULL);
 #endif

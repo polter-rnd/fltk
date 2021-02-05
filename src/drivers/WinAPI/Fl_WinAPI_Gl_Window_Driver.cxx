@@ -160,7 +160,7 @@ GLContext Fl_WinAPI_Gl_Window_Driver::create_gl_context(Fl_Window* window, const
     hdc = Fl_WinAPI_Window_Driver::driver(window)->private_dc = GetDCEx(i->xid, 0, DCX_CACHE);
     fl_save_dc(i->xid, hdc);
     SetPixelFormat(hdc, ((Fl_WinAPI_Gl_Choice*)g)->pixelformat, (PIXELFORMATDESCRIPTOR*)(&((Fl_WinAPI_Gl_Choice*)g)->pfd));
-#    if USE_COLORMAP
+#    if USE_COLORMAP && !USE_GDIPLUS
     if (fl_palette) SelectPalette(hdc, fl_palette, FALSE);
 #    endif
   }
@@ -321,7 +321,7 @@ int Fl_WinAPI_Gl_Window_Driver::mode_(int m, const int *a) {
 }
 
 void Fl_WinAPI_Gl_Window_Driver::make_current_after() {
-#if USE_COLORMAP
+#if USE_COLORMAP && !USE_GDIPLUS
   if (fl_palette) {
     fl_GetDC(fl_xid(pWindow));
     SelectPalette((HDC)fl_graphics_driver->gc(), fl_palette, FALSE);

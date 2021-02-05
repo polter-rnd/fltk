@@ -30,11 +30,11 @@
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
-  transformed_vertex0(xf , yf );
+  transformed_vertex0(float(xf) , float(yf) );
 }
 
 void Fl_GDIplus_Graphics_Driver::vertex(double x,double y) {
-  transformed_vertex0((x*m.a + y*m.c + m.x) , (x*m.b + y*m.d + m.y) );
+  transformed_vertex0(float(x*m.a + y*m.c + m.x) , float(x*m.b + y*m.d + m.y) );
 }
 
 void Fl_GDIplus_Graphics_Driver::end_points() {
@@ -107,7 +107,7 @@ void Fl_GDIplus_Graphics_Driver::begin_complex_polygon() {
 void Fl_GDIplus_Graphics_Driver::gap() {
   while (n>gap_+2 && p[n-1].x == p[gap_].x && p[n-1].y == p[gap_].y) n--;
   if (n > gap_+2) {
-    transformed_vertex0(p[gap_].x, p[gap_].y);
+    transformed_vertex0(float(p[gap_].x), float(p[gap_].y));
     counts[numcount++] = n-gap_;
     gap_ = n;
   } else {

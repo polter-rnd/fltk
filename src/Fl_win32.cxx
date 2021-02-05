@@ -908,7 +908,7 @@ void Fl_WinAPI_System_Driver::paste(Fl_Widget &receiver, int clipboard, const ch
         fl_rectf(0, 0, width, height);
         rect.right = LONG(rect.right * scaling);          // apply scaling to the metafile draw operation
         rect.bottom = LONG(rect.bottom * scaling);
-#if USE_GDIPLUS
+ #if USE_GDIPLUS
         hdc = ((Fl_GDIplus_Graphics_Driver*)surf->driver())->graphics()->GetHDC();
 #else
         hdc = (HDC)fl_graphics_driver->gc();
@@ -1287,7 +1287,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
         Gdiplus::Region *gdi_rgn;
         if (!empty) { // non-empty update region
-          int X = update_rect.left/scale, Y = update_rect.top/scale; // in FLTK units
+          int X = int(update_rect.left/scale), Y = int(update_rect.top/scale); // in FLTK units
           int W = int(update_rect.right/scale) - X + 1, H = int(update_rect.bottom/scale) - Y + 1;
           gdi_rgn = (Gdiplus::Region*)((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->XRectangleRegion(X, Y, W, H);
         } else { gdi_rgn = new Gdiplus::Region(); gdi_rgn->MakeEmpty(); }
@@ -1656,7 +1656,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         Fl_WinAPI_Screen_Driver *sd = (Fl_WinAPI_Screen_Driver *)Fl::screen_driver();
         Fl_WinAPI_Window_Driver *wd = Fl_WinAPI_Window_Driver::driver(window);
         int olds = wd->screen_num();
-        int news = sd->screen_num_unscaled(nx + int(window->w() * scale / 2), ny + int(window->h() * scale / 2));
+        int news = sd->screen_num_unscaled(nx + int(window->w() * scale / 2.f), ny + int(window->h() * scale / 2.f));
         if (news == -1)
           news = olds;
         float s = sd->scale(news);

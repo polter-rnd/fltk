@@ -33,7 +33,7 @@ void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) 
   // "fastest" mode supported for the platform.  I don't know why
   // they should be different (same graphics cards, etc., right?) MRS
   line_width_ = (width ? width : 1);
-  pen_->SetWidth(line_width_);
+  pen_->SetWidth(Gdiplus::REAL(line_width_));
   int standard_dash = style & 0x7;
   if (standard_dash == FL_DASH )
     pen_->SetDashStyle(Gdiplus::DashStyleDash);
