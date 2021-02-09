@@ -70,6 +70,7 @@ public:
   Gdiplus::SolidBrush *brush() {return brush_;};
   Gdiplus::Pen *pen() {return pen_;};
   static Gdiplus::StringFormat *format;
+  static Gdiplus::TextRenderingHint default_text_rendering;
   static void shutdown();
 
   // --- bitmap stuff

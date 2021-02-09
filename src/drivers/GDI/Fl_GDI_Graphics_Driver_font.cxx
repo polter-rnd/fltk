@@ -836,26 +836,55 @@ void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float
 //xyline(x,y,int(x+l));//DEBUG
 }
 
+/* Implementaton note about text drawing with GDI+
+ 
+ FLTK uses 3 different text drawing modes in different situations:
+ - TextRenderingHintAntiAliasGridFit   Specifies that a character is drawn using its
+                                       antialiased glyph bitmap and hinting.
+ - TextRenderingHintAntiAlias          Specifies that a character is drawn using its
+                                       antialiased glyph bitmap and no hinting.
+ - TextRenderingHintClearTypeGridFit   Specifies that a character is drawn using its
+                                       glyph ClearType bitmap and hinting.
+ 
+ * Rotated text should use TextRenderingHintAntiAlias as documented at
+ https://docs.microsoft.com/en-us/windows/win32/api/gdiplusenums/ne-gdiplusenums-textrenderinghint
+ "TextRenderingHintAntiAlias provides the best quality for rotated text. "
+ 
+ * Widget Fl_Input_ uses float-typed x coordinates when drawing text,
+ and TextRenderingHintAntiAlias mode gives good result when performing text selection and
+ moving the cursor within text. In contrast, the other 2 modes perform "hinting"
+ which result in text vibration when advancing selection and in badly positionned cursor.
+ 
+* When these 4 conditions :
+ {1) hinting is on, 2) text is drawn word by word, 3) size() * scale() < 18, 4) integer coordinates}
+ are simultaneously met, words to which hinting gets applied (e.g., FLTK, fit) appear 1 or 2 pixels
+ above other words. I did not find how to compensate such vertical offset. Therefore FLTK with GDI+
+ uses mode TextRenderingHintAntiAlias (without hinting) for effective font sizes < 18.
+ 
+ * In other situations, text is drawn with hinting:
+ - Mode TextRenderingHintClearTypeGridFit is used by the OS under Windows 10 and by FLTK under Windows 8 and above
+ - Mode TextRenderingHintAntiAliasGridFit is used by the OS and FLTK under Windows XP and 7
+
+ */
+
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) {
+  graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintAntiAlias );
   do_draw_(str, n, x, y);
+  graphics_->SetTextRenderingHint( default_text_rendering );
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
-  Gdiplus::TextRenderingHint hint = Gdiplus::TextRenderingHintSystemDefault;
-  bool use_ClearType = (size() * scale() >= 14.f);
-  if (use_ClearType) {
-    // empirically, TextRenderingHintClearTypeGridFit vertically rocks text with small fonts (<14)
-    hint = graphics_->GetTextRenderingHint();
-    graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintClearTypeGridFit);
-  }
+  bool small_font = size() * scale() < 18;
+  if (small_font) graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintAntiAlias );
   do_draw_(str, n, float(x), float(y));
-  if (use_ClearType) graphics_->SetTextRenderingHint(hint);
+  if (small_font) graphics_->SetTextRenderingHint( default_text_rendering );
 }
 
 void Fl_GDIplus_Graphics_Driver::draw(int angle, const char* str, int n, int x, int y) {
   Gdiplus::GraphicsContainer contain = graphics_->BeginContainer();
   graphics_->TranslateTransform(Gdiplus::REAL(x), Gdiplus::REAL(y));
   graphics_->RotateTransform(Gdiplus::REAL(-angle));
+  graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintAntiAlias );
   do_draw_(str, n, 0.f, 0.f);
   graphics_->EndContainer(contain);
 }

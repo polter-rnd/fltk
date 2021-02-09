@@ -95,6 +95,7 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
 
 static ULONG_PTR gdiplusToken = 0;
 Gdiplus::StringFormat *Fl_GDIplus_Graphics_Driver::format = NULL;
+Gdiplus::TextRenderingHint Fl_GDIplus_Graphics_Driver::default_text_rendering = Gdiplus::TextRenderingHintAntiAliasGridFit;
 
 /*
  * By linking this module, the following static method will instantiate the
@@ -109,6 +110,9 @@ Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
   Fl_Graphics_Driver *driver = new Fl_GDIplus_Graphics_Driver();
   Fl_GDIplus_Graphics_Driver::format = (Gdiplus::StringFormat *)Gdiplus::StringFormat::GenericTypographic();
   Fl_GDIplus_Graphics_Driver::format->SetFormatFlags(Gdiplus::StringFormatFlagsMeasureTrailingSpaces);
+  if (GetProcAddress(LoadLibrary("Shcore.DLL"), "GetDpiForMonitor") ) { // true on Windows 8 and above
+    Fl_GDIplus_Graphics_Driver::default_text_rendering = Gdiplus::TextRenderingHintClearTypeGridFit;
+  }
   return driver;
 }
 
@@ -129,7 +133,7 @@ void Fl_GDIplus_Graphics_Driver::global_gc()
 void Fl_GDIplus_Graphics_Driver::graphics(Gdiplus::Graphics *g) {
   graphics_ = g;
   if (graphics_) {
-    graphics_->SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAlias);
+    graphics_->SetTextRenderingHint(default_text_rendering);
     // InterpolationModeNearestNeighbor is the only mode to control exact pixel size of scaled image
     graphics_->SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
   }
