@@ -45,7 +45,7 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
 {
   if (w > 0 && h > 0) {
     float s = scale();
-    if (line_width_ == 1) {
+    if (line_width_ == 1 && s != int(s)) {
       int lwidth = int((y+1)*s) - int(y*s);
       pen_->SetWidth(lwidth/s);
       graphics_->DrawLine(pen_, int(x*s)/s, (int(y*s)+lwidth/2.f)/s, (int((x+w)*s) - 0.5f)/s, (int(y*s)+lwidth/2.f)/s);
@@ -61,8 +61,13 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
       pen_->SetWidth(1);
     }
     else {
-      // this ommits 1 pixel at top-left when lwidth==1
+      Gdiplus::LineJoin join = pen_->GetLineJoin();
+      pen_->SetLineJoin(Gdiplus::LineJoinMiter);
+      Gdiplus::LineCap endcap = pen_->GetEndCap();
+      pen_->SetEndCap(Gdiplus::LineCapSquareAnchor);
       graphics_->DrawRectangle(pen_, Gdiplus::RectF(x+0.5f, y+0.5f, w-1.f, h-1.f));
+      pen_->SetLineJoin(join);
+      pen_->SetEndCap(endcap);
     }
   }
 }
@@ -79,7 +84,7 @@ void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
   Gdiplus::RectF *rect;
   if (s != int(s)) rect = new Gdiplus::RectF( int(x*s)/s, int(y*s)/s,
                         (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s);
-  else rect = new Gdiplus::RectF(Gdiplus::REAL(x), Gdiplus::REAL(y), Gdiplus::REAL(w), Gdiplus::REAL(h));
+  else rect = new Gdiplus::RectF(x, y, w, h);
   graphics_->FillRectangle(brush_, *rect);
   delete rect;
 }

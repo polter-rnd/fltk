@@ -84,6 +84,9 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() {
   translate_stack_depth = 0;
   brush_ = new Gdiplus::SolidBrush(Gdiplus::Color());
   pen_ = new Gdiplus::Pen(Gdiplus::Color(), 1);
+  pen_->SetLineJoin(Gdiplus::LineJoinRound);
+  pen_->SetStartCap(Gdiplus::LineCapFlat);
+  pen_->SetEndCap(Gdiplus::LineCapFlat);
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
