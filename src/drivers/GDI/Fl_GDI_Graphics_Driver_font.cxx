@@ -823,22 +823,45 @@ Gdiplus::REAL Fl_GDIplus_Graphics_Driver::width_wchar(const WCHAR *txt, int l) {
 void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float y) {
   // avoid crash if no font has been set yet
   if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
-//double l = width(str, n);//DEBUG
-  Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  Gdiplus::PointF pointF(x, y - fd->linespacing + fd->descent);
+//pen_->SetColor(Gdiplus::Color(255,0,0));xyline(x,y,int(x+width(str, n)));color(color());//DEBUG
+  int extra = (!memchr(str, ' ', n) && graphics_->GetTextRenderingHint() == Gdiplus::TextRenderingHintSingleBitPerPixelGridFit ? 5 : 0);
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
-  if (wn >= wstr_len) {
-    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
-    wstr_len = wn + 1;
+  if (wn +extra >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1 +extra));
+    wstr_len = wn + 1 +extra;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  graphics_->DrawString((WCHAR*)wstr, wn, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
-//xyline(x,y,int(x+l));//DEBUG
+  float s = scale();
+  Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (extra) x = round(x*s)/s;
+  Gdiplus::PointF pointF(x, round((y - fd->linespacing + fd->descent)*s)/s);
+  Gdiplus::Region region;
+  if (extra) {
+    static WCHAR sp[2] = L" "; wstr[wn] = wstr[wn+1] = sp[0];
+    static WCHAR m[2] = L"m";
+    for (int i = 2; i < extra; i++) wstr[wn+i] = m[0];
+    Gdiplus::CharacterRange charRanges[1] = { Gdiplus::CharacterRange(0, wn) };
+    Gdiplus::StringFormat fmt(Fl_GDIplus_Graphics_Driver::format);
+    fmt.SetMeasurableCharacterRanges(1, charRanges);
+    Gdiplus::SizeF lsize(100000, 100000);
+    Gdiplus::RectF layout(pointF, lsize);
+    graphics_->MeasureCharacterRanges((WCHAR*)wstr, wn, fd->gdiplus_font, layout, &fmt, 1, &region);
+    region.GetBounds(&layout, graphics_);
+    layout.Inflate(2, 2);
+    graphics_->GetClip(&region);
+    graphics_->SetClip(layout, Gdiplus::CombineModeIntersect);
+  }
+  graphics_->DrawString((WCHAR*)wstr, wn +extra, fd->gdiplus_font, pointF, Fl_GDIplus_Graphics_Driver::format, brush_);
+  if (extra) {
+    graphics_->SetClip(&region);
+  }
 }
 
 /* Implementaton note about text drawing with GDI+
  
- FLTK uses 3 different text drawing modes in different situations:
+ FLTK uses 4 different text drawing modes in different situations:
+ - TextRenderingHintSingleBitPerPixelGridFit
+                                       Specifies that a character is drawn using its glyph bitmap and hinting.
  - TextRenderingHintAntiAliasGridFit   Specifies that a character is drawn using its
                                        antialiased glyph bitmap and hinting.
  - TextRenderingHintAntiAlias          Specifies that a character is drawn using its
@@ -855,11 +878,12 @@ void Fl_GDIplus_Graphics_Driver::do_draw_(const char* str, int n, float x, float
  moving the cursor within text. In contrast, the other 2 modes perform "hinting"
  which result in text vibration when advancing selection and in badly positionned cursor.
  
-* When these 4 conditions :
- {1) hinting is on, 2) text is drawn word by word, 3) size() * scale() < 18, 4) integer coordinates}
+* When these 3 conditions :
+ {1) text is drawn word by word, 2) size() * scale() < 18, 3) integer coordinates}
  are simultaneously met, words to which hinting gets applied (e.g., FLTK, fit) appear 1 or 2 pixels
- above other words. I did not find how to compensate such vertical offset. Therefore FLTK with GDI+
- uses mode TextRenderingHintAntiAlias (without hinting) for effective font sizes < 18.
+ above other words. To compensate such vertical offset, the word is extended by "  mmmm", the area
+ of the first word of that text if drawn is computed and used as a clip, and the text is drawn in
+ mode TextRenderingHintSingleBitPerPixelGridFit (with hinting, no antialias).
  
  * In other situations, text is drawn with hinting:
  - Mode TextRenderingHintClearTypeGridFit is used by the OS under Windows 10 and by FLTK under Windows 8 and above
@@ -875,7 +899,7 @@ void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) 
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   bool small_font = size() * scale() < 18;
-  if (small_font) graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintAntiAlias );
+  if (small_font) graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintSingleBitPerPixelGridFit );
   do_draw_(str, n, float(x), float(y));
   if (small_font) graphics_->SetTextRenderingHint( default_text_rendering );
 }
