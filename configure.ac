@@ -894,13 +894,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     LDFLAGS="-mwindows $LDFLAGS"
     DSOFLAGS="-mwindows $DSOFLAGS"
     LIBS="$LIBS -lole32 -luuid -lcomctl32 -lws2_32"
-            
-#        AC_ARG_ENABLE(gdiplus, [  --enable-gdiplus        use GDI+ rather than GDI [[default=no]]])
-#        if test x$enable_gdiplus = xyes; then
-#          CFLAGS="$CFLAGS -DUSE_GDIPLUS"
-#          CXXFLAGS="$CXXFLAGS -DUSE_GDIPLUS"
-#          LIBS="$LIBS -lgdiplus"
-#        fi
     AS_IF([test x$enable_gdiplus = xyes], [
           CFLAGS="$CFLAGS -DUSE_GDIPLUS"
           CXXFLAGS="$CXXFLAGS -DUSE_GDIPLUS"
@@ -1541,11 +1534,8 @@ echo ""
 echo "Configuration Summary"
 echo "-------------------------------------------------------------------------"
 
-AS_CASE([$host_os_gui], [cygwin* | mingw*], [
-#    graphics="GDI"
-    
-    AS_IF([test x$enable_gdiplus = xyes], [graphics="GDI+"], [graphics="GDI"])
-    
+AS_CASE([$host_os_gui], [cygwin* | mingw*], [    
+    AS_IF([test x$enable_gdiplus = xyes], [graphics="GDI+"], [graphics="GDI"])    
 ], [darwin*], [
     graphics="Quartz"
 ], [*], [
