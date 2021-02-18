@@ -241,6 +241,9 @@ Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsi
   size = fsize;
 #if USE_GDIPLUS
   fid = NULL;
+#if HAVE_GL
+  gl_size = 0;
+#endif
   if (fsize > 0) {
     name++;
     wchar_t wname[LF_FACESIZE];

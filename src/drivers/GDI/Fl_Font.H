@@ -34,6 +34,9 @@ public:
   Gdiplus::REAL *width[64];
   float descent, linespacing;
   Gdiplus::Font *gdiplus_font;
+#  if HAVE_GL
+  Fl_Fontsize gl_size;
+#  endif
 #else
   TEXTMETRIC metr;
   int *width[64];

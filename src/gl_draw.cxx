@@ -83,9 +83,6 @@ void  gl_font(int fontid, int size) {
       Fl::draw_GL_text_with_textures(has_texture_rectangle);
     }
   }
-#if defined(FL_CFG_GFX_GDI) && USE_GDIPLUS
-  if (!has_texture_rectangle) size *= fl_graphics_driver->scale();
-#endif
   fl_font(fontid, size);
   Fl_Font_Descriptor *fl_fontsize = fl_graphics_driver->font_descriptor();
   if (!has_texture_rectangle) Fl_Gl_Window_Driver::global()->gl_bitmap_font(fl_fontsize);

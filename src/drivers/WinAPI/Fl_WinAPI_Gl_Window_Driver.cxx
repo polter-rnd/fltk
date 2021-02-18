@@ -384,6 +384,19 @@ int Fl_WinAPI_Gl_Window_Driver::genlistsize() {
 }
 
 void Fl_WinAPI_Gl_Window_Driver::gl_bitmap_font(Fl_Font_Descriptor *fl_fontsize) {
+#if USE_GDIPLUS
+  Fl_GDI_Font_Descriptor *gdi_fd = (Fl_GDI_Font_Descriptor*)fl_fontsize;
+  Fl_Fontsize fs = int(round(fl_size() * fl_graphics_driver->scale()));
+  if (!gdi_fd->fid || gdi_fd->gl_size  != fs) {
+    if (gdi_fd->fid) DeleteObject(gdi_fd->fid);
+    if (gdi_fd->listbase) glDeleteLists(gdi_fd->listbase, genlistsize());
+    Fl_Fontdesc* s = fl_fonts+fl_font();
+    gdi_fd->fid = Fl_GDI_Font_Descriptor::create_gdi_font(s->name, fs, 0);
+    gdi_fd->listbase = 0;
+    gdi_fd->gl_size = fs;
+    for (int i = 0; i < 64; i++) gdi_fd->glok[i] = 0;
+  }
+#endif
   if (!fl_fontsize->listbase) {
     fl_fontsize->listbase = glGenLists(genlistsize());
   }
