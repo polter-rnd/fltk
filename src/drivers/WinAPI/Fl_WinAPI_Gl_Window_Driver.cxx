@@ -56,6 +56,9 @@ class Fl_WinAPI_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   virtual void gl_bitmap_font(Fl_Font_Descriptor *fl_fontsize);
   virtual void get_list(Fl_Font_Descriptor *fd, int r);
   virtual int genlistsize();
+#if USE_GDIPLUS
+  virtual Fl_Fontsize effective_size();
+#endif
 #if HAVE_GL_OVERLAY
   virtual void gl_hide_before(void *& overlay);
   virtual int can_do_overlay();
@@ -413,5 +416,10 @@ void Fl_WinAPI_Gl_Window_Driver::get_list(Fl_Font_Descriptor *fd, int r) {
   SelectObject((HDC)fl_graphics_driver->gc(), oldFid);
 }
 
+#if USE_GDIPLUS
+Fl_Fontsize Fl_WinAPI_Gl_Window_Driver::effective_size() {
+  return (Fl_Fontsize)round(fl_graphics_driver->size() * gl_scale);
+}
+#endif
 
 #endif // HAVE_GL
