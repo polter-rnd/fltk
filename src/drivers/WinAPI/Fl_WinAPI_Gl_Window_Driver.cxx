@@ -19,6 +19,9 @@
 #include <FL/platform.H>
 #include "../../Fl_Screen_Driver.H"
 #include <FL/gl.h>
+#if USE_GDIPLUS
+#include <FL/math.h> // for roundf()
+#endif
 #include "../../Fl_Gl_Window_Driver.H"
 #include "../../Fl_Gl_Choice.H"
 #include "Fl_WinAPI_Window_Driver.H"
@@ -389,7 +392,7 @@ int Fl_WinAPI_Gl_Window_Driver::genlistsize() {
 void Fl_WinAPI_Gl_Window_Driver::gl_bitmap_font(Fl_Font_Descriptor *fl_fontsize) {
 #if USE_GDIPLUS
   Fl_GDI_Font_Descriptor *gdi_fd = (Fl_GDI_Font_Descriptor*)fl_fontsize;
-  Fl_Fontsize fs = int(round(fl_size() * fl_graphics_driver->scale()));
+  Fl_Fontsize fs = int(roundf(fl_size() * fl_graphics_driver->scale()));
   if (!gdi_fd->fid || gdi_fd->gl_size  != fs) {
     if (gdi_fd->fid) DeleteObject(gdi_fd->fid);
     if (gdi_fd->listbase) glDeleteLists(gdi_fd->listbase, genlistsize());
@@ -418,7 +421,7 @@ void Fl_WinAPI_Gl_Window_Driver::get_list(Fl_Font_Descriptor *fd, int r) {
 
 #if USE_GDIPLUS
 Fl_Fontsize Fl_WinAPI_Gl_Window_Driver::effective_size() {
-  return (Fl_Fontsize)round(fl_graphics_driver->size() * gl_scale);
+  return (Fl_Fontsize)roundf(fl_graphics_driver->size() * gl_scale);
 }
 #endif
 
