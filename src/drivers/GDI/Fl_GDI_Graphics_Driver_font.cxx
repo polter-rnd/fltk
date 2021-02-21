@@ -870,8 +870,8 @@ pen_->SetWidth(line_width_);color(color());//DEBUG*/
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
   Fl_GDI_Font_Descriptor *fd = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (extra) x = round(x * s)/s;
-  Gdiplus::PointF pointF(x, round((y - fd->linespacing + fd->descent)*s)/s);
+  if (extra) x = roundf(x * s)/s;
+  Gdiplus::PointF pointF(x, roundf((y - fd->linespacing + fd->descent)*s)/s);
   Gdiplus::Region region;
   if (extra) {
     memcpy(wstr + wn, L" r", extra * sizeof(WCHAR));
@@ -881,7 +881,7 @@ pen_->SetWidth(line_width_);color(color());//DEBUG*/
     Gdiplus::RectF layout(pointF.X, pointF.Y, 100000, 100000);
     graphics_->MeasureCharacterRanges((WCHAR*)wstr, wn + extra, fd->gdiplus_font, layout, &fmt, 1, &region);
     region.GetBounds(&layout, graphics_);
-    layout.Width -= width(' ')/2;
+    layout.Width -= Gdiplus::REAL(width(' ')/2);
     graphics_->GetClip(&region);
     graphics_->SetClip(layout, Gdiplus::CombineModeIntersect);
   }
@@ -893,7 +893,7 @@ pen_->SetWidth(line_width_);color(color());//DEBUG*/
 
 void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, float x, float y) {
   graphics_->SetTextRenderingHint( Gdiplus::TextRenderingHintAntiAlias );
-  do_draw_(str, n, round(x), round(y));
+  do_draw_(str, n, roundf(x), roundf(y));
   graphics_->SetTextRenderingHint( default_text_rendering );
 }
 

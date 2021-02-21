@@ -223,7 +223,7 @@ void
   physPageSize.x = GetDeviceCaps(hPr, HORZRES);
   physPageSize.y = GetDeviceCaps(hPr, VERTRES);
 #if USE_GDIPLUS
-  f = int(physPageSize.y);
+  f = float(physPageSize.y);
 #endif
   DPtoLP(hPr, &physPageSize, 1);
 #if USE_GDIPLUS

@@ -84,7 +84,7 @@ void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
   Gdiplus::RectF *rect;
   if (s != int(s)) rect = new Gdiplus::RectF( int(x*s)/s, int(y*s)/s,
                         (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s);
-  else rect = new Gdiplus::RectF(x, y, w, h);
+  else rect = new Gdiplus::RectF((Gdiplus::REAL)x, (Gdiplus::REAL)y, (Gdiplus::REAL)w, (Gdiplus::REAL)h);
   graphics_->FillRectangle(brush_, *rect);
   delete rect;
 }
