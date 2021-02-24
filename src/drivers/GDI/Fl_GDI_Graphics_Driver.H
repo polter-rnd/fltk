@@ -38,6 +38,8 @@
 #  endif
 #  include <gdiplus.h>
 
+#define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
+
 class FL_EXPORT Fl_GDIplus_Graphics_Driver : public Fl_Graphics_Driver {
 private:
   int line_width_;
@@ -61,6 +63,11 @@ protected:
 public:
   Fl_GDIplus_Graphics_Driver();
   virtual ~Fl_GDIplus_Graphics_Driver();
+  // This function aims to compute accurately int(x * s) in
+  // presence of rounding errors existing with floating point numbers
+  // and that sometimes differ between 32 and 64 bits.
+  static inline int floor(int x, float s) { return int(x * s + 0.001f); }
+  inline int floor(int x) { return Fl_GDIplus_Graphics_Driver::floor(x, scale()); }
   virtual int has_feature(driver_feature mask) { return mask & NATIVE; }
   char can_do_alpha_blending();
   virtual void gc(void *ctxt);

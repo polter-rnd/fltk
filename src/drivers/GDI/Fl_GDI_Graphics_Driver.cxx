@@ -515,7 +515,6 @@ void Fl_GDI_Graphics_Driver::set_current_() {
   restore_clip();
 }
 
-<<<<<<< HEAD
 void Fl_GDI_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height)
 {
   float s = scale();
@@ -523,6 +522,5 @@ void Fl_GDI_Graphics_Driver::cache_size(Fl_Image *img, int &width, int &height)
   height = (s == int(s) ? height * int(s) : floor(height+1));
   cache_size_finalize(img, width, height);
 }
-=======
+
 #endif
->>>>>>> Add option to have Windows platform use GDI+ rather that GDI

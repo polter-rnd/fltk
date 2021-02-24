@@ -446,9 +446,8 @@ protected:
   virtual void polygon_unscaled(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3);
   virtual void circle(double x, double y, double r);
   virtual void ellipse_unscaled(double xt, double yt, double rx, double ry);
-  virtual Fl_Font font() {return Fl_Graphics_Driver::font();}
-  virtual void font(Fl_Font face, Fl_Fontsize size);
   virtual Fl_Font font();
+  virtual void font(Fl_Font face, Fl_Fontsize size);
   virtual void font_unscaled(Fl_Font face, Fl_Fontsize size);
   virtual double width(const char *str, int n);
   virtual double width(unsigned int c);
@@ -463,7 +462,6 @@ protected:
   virtual int height_unscaled();
   virtual int descent_unscaled();
   virtual void draw(const char *str, int n, int x, int y);
-  virtual void draw(const char *str, int n, float x, float y) {Fl_Graphics_Driver::draw(str, n, x, y);}
   virtual void draw_unscaled(const char *str, int n, int x, int y);
   virtual void draw(int angle, const char *str, int n, int x, int y);
   virtual void draw_unscaled(int angle, const char *str, int n, int x, int y);
@@ -473,7 +471,6 @@ protected:
   virtual void arc(double x, double y, double r, double start, double end);
   virtual void arc(int x, int y, int w, int h, double a1, double a2);
   virtual void arc_unscaled(float x, float y, float w, float h, double a1, double a2);
-  virtual void arc(double x, double y, double r, double start, double end) {Fl_Graphics_Driver::arc(x,y,r,start, end);}
   virtual void pie(int x, int y, int w, int h, double a1, double a2);
   virtual void pie_unscaled(float x, float y, float w, float h, double a1, double a2);
   virtual void line_style(int style, int width=0, char* dashes=0);
