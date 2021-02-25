@@ -157,11 +157,11 @@ void Fl_GDIplus_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   if (srcy < 0) {h += srcy; y -= srcy; srcy = 0;}
   int off_width = ((Gdiplus::Bitmap*)bitmap)->GetWidth();
   int off_height = ((Gdiplus::Bitmap*)bitmap)->GetHeight();
-  if (int((srcx + w)*s) > off_width) {w = int(ceil(off_width/s)) - srcx;}
-  if (int((srcy + h)*s) > off_height) {h = int(ceil(off_height/s)) - srcy;}
+  if (this->floor(srcx + w) > off_width) {w = int(ceil(off_width/s)) - srcx;}
+  if (this->floor(srcy + h) > off_height) {h = int(ceil(off_height/s)) - srcy;}
   if (w <= 0 || h <= 0) return;
   push_clip(x,y,w,h);
-  Gdiplus::RectF rect((int(x-srcx)*s)/s, (int(y-srcy)*s)/s, off_width/s, off_height/s);
+  Gdiplus::RectF rect(this->floor(x-srcx)/s, this->floor(y-srcy)/s, off_width/s, off_height/s);
   graphics_->DrawImage((Gdiplus::Bitmap*)bitmap, rect);
   pop_clip();
 }
@@ -189,8 +189,8 @@ void Fl_GDIplus_Graphics_Driver::fixloop() {  // remove equal points from closed
 Fl_Region Fl_GDIplus_Graphics_Driver::XRectangleRegion(int x, int y, int w, int h) {
   float s = scale();
   if (s != int(s)) {
-    return new Gdiplus::Region(Gdiplus::RectF(int(x*s)/s, int(y*s)/s,
-          (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s));
+    return new Gdiplus::Region(Gdiplus::RectF(floor(x)/s, floor(y)/s,
+          (floor(x+w) - floor(x))/s, (floor(y+h) - floor(y))/s));
   }
   return new Gdiplus::Region(Gdiplus::Rect(x,y,w,h));
 }

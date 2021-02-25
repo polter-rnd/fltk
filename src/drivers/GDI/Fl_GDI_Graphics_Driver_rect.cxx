@@ -37,7 +37,7 @@ void Fl_GDIplus_Graphics_Driver::point(int x, int y) {
 void Fl_GDIplus_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   float s = scale();
   pen_->SetWidth(1/s); // make pen have a one-pixel width
-  graphics_->DrawRectangle(pen_, Gdiplus::RectF((int(x*s)+0.5f)/s, (int(y*s)+0.5f)/s, (int((x+w-1)*s) - int(x*s))/s, (int((y+h-1)*s) - int(y*s))/s));
+  graphics_->DrawRectangle(pen_, Gdiplus::RectF((floor(x)+0.5f)/s, (floor(y)+0.5f)/s, (floor(x+w-1) - floor(x))/s, (floor(y+h-1) - floor(y))/s));
   pen_->SetWidth(Gdiplus::REAL(line_width_));
 }
 
@@ -46,18 +46,18 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
   if (w > 0 && h > 0) {
     float s = scale();
     if (line_width_ == 1 && s != int(s)) {
-      int lwidth = int((y+1)*s) - int(y*s);
+      int lwidth = floor(y+1) - floor(y);
       pen_->SetWidth(lwidth/s);
-      graphics_->DrawLine(pen_, int(x*s)/s, (int(y*s)+lwidth/2.f)/s, (int((x+w)*s) - 0.5f)/s, (int(y*s)+lwidth/2.f)/s);
-      lwidth = int((x+w)*s) - int((x+w-1)*s);
+      graphics_->DrawLine(pen_, floor(x)/s, (floor(y)+lwidth/2.f)/s, (floor(x+w) - 0.5f)/s, (floor(y)+lwidth/2.f)/s);
+      lwidth = floor(x+w) - floor(x+w-1);
       pen_->SetWidth(lwidth/s);
-      graphics_->DrawLine(pen_, (int((x+w-1)*s)+lwidth/2.f)/s, int(y*s)/s, (int((x+w-1)*s)+lwidth/2.f)/s, (int((y+h)*s) - 0.5f)/s);
-      lwidth = int((y+h)*s) - int((y+h-1)*s);
+      graphics_->DrawLine(pen_, (floor(x+w-1)+lwidth/2.f)/s, floor(y)/s, (floor(x+w-1)+lwidth/2.f)/s, (floor(y+h) - 0.5f)/s);
+      lwidth = floor(y+h) - floor(y+h-1);
       pen_->SetWidth(lwidth/s);
-      graphics_->DrawLine(pen_, int(x*s)/s, (int((y+h-1)*s)+lwidth/2.f)/s, (int((x+w)*s) - 0.5f)/s, (int((y+h-1)*s)+lwidth/2.f)/s);
-      lwidth = int((x+1)*s) - int((x)*s);
+      graphics_->DrawLine(pen_, floor(x)/s, (floor(y+h-1)+lwidth/2.f)/s, (floor(x+w) - 0.5f)/s, (floor(y+h-1)+lwidth/2.f)/s);
+      lwidth = floor(x+1) - floor(x);
       pen_->SetWidth(lwidth/s);
-      graphics_->DrawLine(pen_, (int(x*s)+lwidth/2.f)/s, int(y*s)/s, (int(x*s)+lwidth/2.f)/s, (int((y+h)*s) - 0.5f)/s);
+      graphics_->DrawLine(pen_, (floor(x)+lwidth/2.f)/s, floor(y)/s, (floor(x)+lwidth/2.f)/s, (floor(y+h) - 0.5f)/s);
       pen_->SetWidth(1);
     }
     else {
@@ -74,7 +74,7 @@ void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h)
 
 void Fl_GDIplus_Graphics_Driver::focus_rect(int x, int y, int w, int h) {
   pen_->SetDashStyle(Gdiplus::DashStyleDot);
-  rect(x, y, w, h);
+  graphics_->DrawRectangle(pen_, Gdiplus::RectF(x+0.5f, y+0.5f, w-1.f, h-1.f) );
   pen_->SetDashStyle(Gdiplus::DashStyleSolid);
 }
 
@@ -82,8 +82,8 @@ void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
   if (w<=0 || h<=0) return;
   float s = scale();
   Gdiplus::RectF *rect;
-  if (s != int(s)) rect = new Gdiplus::RectF( int(x*s)/s, int(y*s)/s,
-                        (int((x+w)*s) - int(x*s))/s, (int((y+h)*s) - int(y*s))/s);
+  if (s != int(s)) rect = new Gdiplus::RectF( floor(x)/s, floor(y)/s,
+                        (floor(x+w) - floor(x))/s, (floor(y+h) - floor(y))/s);
   else rect = new Gdiplus::RectF((Gdiplus::REAL)x, (Gdiplus::REAL)y, (Gdiplus::REAL)w, (Gdiplus::REAL)h);
   graphics_->FillRectangle(brush_, *rect);
   delete rect;
@@ -94,9 +94,9 @@ void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
   int xx = (x < x1 ? x : x1);
   int xx1 = (x < x1 ? x1 : x);
   if (s != int(s) && line_width_ == 1) {
-    int lwidth = int((y+1)*s) - int(y*s);
+    int lwidth = floor(y+1) - floor(y);
     pen_->SetWidth(lwidth/s);
-    graphics_->DrawLine(pen_, int(xx*s)/s, (int(y*s)+lwidth/2.f)/s, (int((xx1+1)*s) - 0.5f)/s, (int(y*s)+lwidth/2.f)/s);
+    graphics_->DrawLine(pen_, floor(xx)/s, (floor(y)+lwidth/2.f)/s, (floor(xx1+1) - 0.5f)/s, (floor(y)+lwidth/2.f)/s);
     pen_->SetWidth(Gdiplus::REAL(line_width_));
   } else {
     graphics_->DrawLine(pen_, (float)xx, y+1-line_width_/2.f, xx1+0.75f, y+1-line_width_/2.f);
@@ -119,9 +119,9 @@ void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
   int yy = (y < y1 ? y : y1);
   int yy1 = (y < y1 ? y1 : y);
   if (s != int(s) && line_width_ == 1) {
-    int lwidth = int((x+1)*s) - int(x*s);
+    int lwidth = floor(x+1) - floor(x);
     pen_->SetWidth(lwidth/s);
-    graphics_->DrawLine(pen_, (int(x*s)+lwidth/2.f)/s, int(yy*s)/s, (int(x*s)+lwidth/2.f)/s, (int((yy1+1)*s) - 0.5f)/s);
+    graphics_->DrawLine(pen_, (floor(x)+lwidth/2.f)/s, floor(yy)/s, (floor(x)+lwidth/2.f)/s, (floor(yy1+1) - 0.5f)/s);
     pen_->SetWidth(Gdiplus::REAL(line_width_));
   } else {
     graphics_->DrawLine(pen_, x+1-line_width_/2.f, (float)yy, x+1-line_width_/2.f, yy1+0.75f);
