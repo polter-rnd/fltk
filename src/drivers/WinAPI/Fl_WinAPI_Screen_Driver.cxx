@@ -497,20 +497,23 @@ Fl_WinAPI_Screen_Driver::read_win_rectangle(
                                             bool may_capture_subwins, bool *did_capture_subwins)
 {
   float s = Fl_Surface_Device::surface()->driver()->scale();
-  int xs = Fl_GDI_Graphics_Driver::floor(X, s), ys = Fl_GDI_Graphics_Driver::floor(Y, s), ws, hs;
+  int xs, ys, ws, hs;
 #if USE_GDIPLUS
+  xs = Fl_GDIplus_Graphics_Driver::floor(X, s); ys = Fl_GDIplus_Graphics_Driver::floor(Y, s);
   if (!win) { // read from off-screen buffer
     Gdiplus::Bitmap *bitmap = (Gdiplus::Bitmap*)fl_window;
-    Gdiplus::Bitmap *part = bitmap->Clone(xs, ys, Fl_GDI_Graphics_Driver::floor(w, s), Fl_GDI_Graphics_Driver::floor(h, s), PixelFormat32bppARGB);
+    Gdiplus::Bitmap *part = bitmap->Clone(xs, ys, Fl_GDIplus_Graphics_Driver::floor(w, s), Fl_GDIplus_Graphics_Driver::floor(h, s), PixelFormat32bppARGB);
     Fl_RGB_Image *image = Fl_GDIplus_Graphics_Driver::offscreen_to_rgb((Fl_Offscreen)part);
     delete part;
     return image;
   }
+#else
+  xs = Fl_GDI_Graphics_Driver::floor(X, s); ys = Fl_GDI_Graphics_Driver::floor(Y, s);
 #endif
   if (int(s) == s) { ws = w * int(s); hs = h * int(s); }
   else {
 #if USE_GDIPLUS
-    ws = Fl_GDI_Graphics_Driver::floor((X+w), s) - xs, hs = Fl_GDI_Graphics_Driver::floor((Y+h), s) - ys;
+    ws = Fl_GDIplus_Graphics_Driver::floor((X+w), s) - xs, hs = Fl_GDIplus_Graphics_Driver::floor((Y+h), s) - ys;
 #else
     ws = Fl_GDI_Graphics_Driver::floor((w+1), s); // approximates what Fl_Graphics_Driver::cache_size() does
     hs = Fl_GDI_Graphics_Driver::floor((h+1), s);

@@ -38,8 +38,6 @@
 #  endif
 #  include <gdiplus.h>
 
-#define Fl_GDI_Graphics_Driver Fl_GDIplus_Graphics_Driver
-
 class FL_EXPORT Fl_GDIplus_Graphics_Driver : public Fl_Graphics_Driver {
 private:
   int line_width_;
