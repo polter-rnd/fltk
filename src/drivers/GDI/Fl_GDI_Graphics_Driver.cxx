@@ -269,6 +269,22 @@ Fl_RGB_Image *Fl_GDIplus_Graphics_Driver::offscreen_to_rgb(Fl_Offscreen offscree
   return image;
 }
 
+float Fl_GDIplus_Graphics_Driver::remove_scale() {
+  float s = scale();
+  if (s != 1.f) {
+    scale(1.f);
+    graphics_->ScaleTransform(1/s, 1/s);
+  }
+  return s;
+}
+
+void Fl_GDIplus_Graphics_Driver::restore_scale(float s) {
+  if (s != 1.f) {
+    scale(s);
+    graphics_->ScaleTransform(s, s);
+  }
+}
+
 Gdiplus::Graphics *fl_gdiplus_graphics() {
   return ((Fl_GDIplus_Graphics_Driver*)fl_graphics_driver)->graphics();
 }

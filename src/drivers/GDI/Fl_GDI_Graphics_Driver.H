@@ -166,6 +166,8 @@ protected:
   void global_gc();
   virtual void overlay_rect(int x, int y, int w , int h);
   virtual void cache_size(Fl_Image* img, int &width, int &height);
+  virtual float remove_scale();
+  virtual void restore_scale(float);
 };
 
 class Fl_GDIplus_Printer_Graphics_Driver : public Fl_GDIplus_Graphics_Driver {
