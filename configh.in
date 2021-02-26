@@ -363,7 +363,7 @@
  */
 
 #ifdef _WIN32
-#define USE_GDIPLUS 0
+#define USE_GDIPLUS 1
 #endif
 
 /*
