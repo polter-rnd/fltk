@@ -42,7 +42,11 @@ Fl_Copy_Surface_Driver *Fl_Copy_Surface_Driver::newCopySurfaceDriver(int w, int 
 
 
 Fl_GDI_Copy_Surface_Driver::Fl_GDI_Copy_Surface_Driver(int w, int h) : Fl_Copy_Surface_Driver(w, h) {
+#if USE_GDIPLUS
+  driver(new Fl_GDIplus_Graphics_Driver);
+#else
   driver(new Fl_GDI_Graphics_Driver);
+#endif
   oldgc = (HDC)Fl_Surface_Device::surface()->driver()->gc();
   // exact computation of factor from screen units to EnhMetaFile units (0.01 mm)
   HDC hdc = GetDC(NULL);

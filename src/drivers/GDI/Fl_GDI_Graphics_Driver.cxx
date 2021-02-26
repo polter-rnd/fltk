@@ -22,13 +22,43 @@
 #include <FL/fl_draw.H>
 #include "../../Fl_Screen_Driver.H"
 
+#if USE_GDIPLUS
+static ULONG_PTR gdiplusToken = 0;
+
+Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Driver() {
+  pen_ = new Gdiplus::Pen(color_, 1);
+  pen_->SetLineJoin(Gdiplus::LineJoinRound);
+  pen_->SetStartCap(Gdiplus::LineCapFlat);
+  pen_->SetEndCap(Gdiplus::LineCapFlat);
+  brush_ = new Gdiplus::SolidBrush(color_);
+}
+
+Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
+  delete pen_;
+  delete brush_;
+}
+#endif
+
 /*
  * By linking this module, the following static method will instantiate the
  * Windows GDI Graphics driver as the main display driver.
  */
 Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
 {
-  return new Fl_GDI_Graphics_Driver();
+#if USE_GDIPLUS
+  // Initialize GDI+.
+  static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+  if (gdiplusToken == 0) GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+  
+  Fl_Graphics_Driver *driver = new Fl_GDIplus_Graphics_Driver();
+
+  if (GetProcAddress(LoadLibrary("Shcore.DLL"), "GetDpiForMonitor") ) { // true on Windows 8 and above
+    ;
+  }
+  return driver;
+#else
+  return new Fl_GDIplus_Graphics_Driver();
+#endif
 }
 
 // Code used to switch output to an off-screen window.  See macros in

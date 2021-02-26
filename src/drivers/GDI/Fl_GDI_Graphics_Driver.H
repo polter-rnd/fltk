@@ -26,6 +26,14 @@
 #include <FL/Fl_Graphics_Driver.H>
 #include <windows.h>
 #include <stdlib.h>
+#include <config.h>
+
+#if USE_GDIPLUS
+#  if defined(_MSC_VER)
+#    include <objidl.h>
+#  endif
+#  include <gdiplus.h>
+#endif
 
 /**
   \brief The Windows-specific graphics driver class.
@@ -164,5 +172,35 @@ public:
   void copy_offscreen(int x, int y, int w, int h, Fl_Offscreen bitmap, int srcx, int srcy);
 };
 
+#if USE_GDIPLUS
+
+class Fl_GDIplus_Graphics_Driver : public Fl_GDI_Graphics_Driver {
+private:
+  Gdiplus::Color color_;
+  Gdiplus::Pen *pen_;
+  Gdiplus::SolidBrush *brush_;
+public:
+  Fl_GDIplus_Graphics_Driver();
+  virtual ~Fl_GDIplus_Graphics_Driver();
+  virtual void line(int x, int y, int x1, int y1);
+  virtual void line(int x, int y, int x1, int y1, int x2, int y2);
+  void loop(int x0, int y0, int x1, int y1, int x2, int y2);
+  void loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+  void polygon(int x0, int y0, int x1, int y1, int x2, int y2);
+  void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+  virtual void line_style(int style, int width, char* dashes);
+  virtual void arc(int x, int y, int w, int h, double a1, double a2);
+  virtual void pie(int x, int y, int w, int h, double a1, double a2);
+  
+  virtual void transformed_vertex(double xf, double yf);
+  virtual void vertex(double x,double y);
+  virtual void end_line();
+  virtual void end_loop();
+  virtual void end_polygon();
+  virtual void end_complex_polygon();
+  virtual void circle(double x, double y, double r);
+};
+
+#endif // USE_GDIPLUS
 
 #endif // FL_GDI_GRAPHICS_DRIVER_H

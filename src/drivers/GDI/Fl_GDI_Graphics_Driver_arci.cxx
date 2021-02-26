@@ -61,3 +61,27 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
     } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
   } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
 }
+
+#if USE_GDIPLUS
+
+void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
+  if (w <= 0 || h <= 0) return;
+  Gdiplus::Graphics graphics_(gc_);
+  graphics_.ScaleTransform(scale(), scale());
+  color_.SetFromCOLORREF(fl_RGB());
+  pen_->SetColor(color_);
+  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  graphics_.DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(-(a2-a1)));
+}
+
+void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
+  if (w <= 0 || h <= 0) return;
+  Gdiplus::Graphics graphics_(gc_);
+  graphics_.ScaleTransform(scale(), scale());
+  color_.SetFromCOLORREF(fl_RGB());
+  brush_->SetColor(color_);
+  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  graphics_.FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(-(a2-a1)));
+}
+
+#endif
