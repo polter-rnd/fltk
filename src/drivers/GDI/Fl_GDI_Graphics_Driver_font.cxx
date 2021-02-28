@@ -15,7 +15,6 @@
 //
 
 #include <config.h>
-#if !USE_GDIPLUS
 
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
@@ -33,8 +32,6 @@
 # endif
 # define _WIN32_WINNT 0x0500
 #endif
-
-#endif // !USE_GDIPLUS
 
 // Select fonts from the FLTK font table.
 #include "Fl_GDI_Graphics_Driver.H"
