@@ -49,17 +49,19 @@ Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
   // Initialize GDI+.
   static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
   if (gdiplusToken == 0) GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-  
-  Fl_Graphics_Driver *driver = new Fl_GDIplus_Graphics_Driver();
 
-  if (GetProcAddress(LoadLibrary("Shcore.DLL"), "GetDpiForMonitor") ) { // true on Windows 8 and above
-    ;
-  }
+  Fl_Graphics_Driver *driver = new Fl_GDIplus_Graphics_Driver();
   return driver;
 #else
-  return new Fl_GDIplus_Graphics_Driver();
+  return new Fl_GDI_Graphics_Driver();
 #endif
 }
+
+#if USE_GDIPLUS
+void Fl_GDIplus_Graphics_Driver::shutdown() {
+  Gdiplus::GdiplusShutdown(gdiplusToken);
+}
+#endif
 
 // Code used to switch output to an off-screen window.  See macros in
 // win32.H which save the old state in local variables.
