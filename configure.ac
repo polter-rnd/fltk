@@ -139,9 +139,16 @@ AC_ARG_ENABLE([xrender], AS_HELP_STRING([--disable-xrender], [turn off Xrender s
 
 AS_CASE([$host_os], [cygwin* | mingw*], [
   AC_ARG_ENABLE([gdiplus], AS_HELP_STRING([--disable-gdiplus], [don't use GDI+ for antialiased graphics]))
-  AS_IF([test x$enable_gdiplus = xno], [
-    AC_DEFINE([USE_GDIPLUS], 0, [Antialiased graphics through GDI+])
-  ])
+
+ gdiplus_found=no
+    AS_IF([test x$enable_gdiplus != xno], [
+        AC_CHECK_HEADER([gdiplus.h], [
+            AC_DEFINE([USE_GDIPLUS])
+            LIBS="-lgdiplus $LIBS"
+            gdiplus_found=yes
+        ])
+    ])
+
 ])
 
 AS_IF([test x$enable_pango = xyes -a x$enable_xft = xno], [
@@ -894,11 +901,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     LDFLAGS="-mwindows $LDFLAGS"
     DSOFLAGS="-mwindows $DSOFLAGS"
     LIBS="$LIBS -lole32 -luuid -lcomctl32 -lws2_32"
-    AS_IF([test x$enable_gdiplus != xno], [
-          CFLAGS="$CFLAGS -DUSE_GDIPLUS"
-          CXXFLAGS="$CXXFLAGS -DUSE_GDIPLUS"
-          LIBS="$LIBS -lgdiplus"
-        ])
 
     BUILD="WIN"
     AS_IF([test "x$with_optim" = x], [
@@ -1535,7 +1537,7 @@ echo "Configuration Summary"
 echo "-------------------------------------------------------------------------"
 
 AS_CASE([$host_os_gui], [cygwin* | mingw*], [
-    AS_IF([test x$enable_gdiplus != xno], [graphics="GDI+"], [graphics="GDI"])
+    AS_IF([test x$gdiplus_found = xyes], [graphics="GDI+"], [graphics="GDI"])
 ], [darwin*], [
     graphics="Quartz"
 ], [*], [
