@@ -69,6 +69,7 @@ void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, doub
   Gdiplus::Graphics graphics_(gc_);
   color_.SetFromCOLORREF(fl_RGB());
   pen_->SetColor(color_);
+  Gdiplus::REAL oldw = pen_->GetWidth();
   pen_->SetWidth(line_width_);
   graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   float s = scale();
@@ -77,6 +78,7 @@ void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, doub
   w = Fl_GDI_Graphics_Driver::floor(x+w) - xx - 1 + line_width_/2 - int(s-1);
   h = Fl_GDI_Graphics_Driver::floor(y+h) - yy - 1 + line_width_/2 - int(s-1);
   graphics_.DrawArc(pen_, xx, yy, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  pen_->SetWidth(oldw);
 }
 
 void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
