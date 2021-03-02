@@ -142,11 +142,12 @@ AS_CASE([$host_os], [cygwin* | mingw*], [
 
  gdiplus_found=no
     AS_IF([test x$enable_gdiplus != xno], [
-        AC_CHECK_HEADER([gdiplus.h], [
+        AC_CHECK_HEADERS([wtypes.h gdiplus.h], [
             AC_DEFINE([USE_GDIPLUS])
             LIBS="-lgdiplus $LIBS"
             gdiplus_found=yes
-        ])
+        ], [],
+    [[#include <wtypes.h>]])
     ])
 
 ])
