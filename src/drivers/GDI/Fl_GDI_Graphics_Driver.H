@@ -192,8 +192,8 @@ public:
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2);
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
   virtual void line_style(int style, int width, char* dashes);
-  virtual void arc(int x, int y, int w, int h, double a1, double a2);
-  virtual void pie(int x, int y, int w, int h, double a1, double a2);
+  virtual void arc_unscaled(int x, int y, int w, int h, double a1, double a2);
+  virtual void pie_unscaled(int x, int y, int w, int h, double a1, double a2);
   virtual void transformed_vertex(double xf, double yf);
   virtual void vertex(double x,double y);
   virtual void end_line();

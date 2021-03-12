@@ -63,8 +63,8 @@ void Fl_GDI_Graphics_Driver::line_style_unscaled(int style, int width, char* das
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) {
-  line_width_ = (width ? width : 1);
-  pen_->SetWidth(Gdiplus::REAL(line_width_));
+  int gdi_width = (width ? width : 1);
+  pen_->SetWidth(Gdiplus::REAL(gdi_width));
   int standard_dash = style & 0x7;
   if (standard_dash == FL_DASH )
     pen_->SetDashStyle(Gdiplus::DashStyleDash);
@@ -99,7 +99,7 @@ void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) 
   if (dashes && *dashes) {
     int n = 0; while (dashes[n]) n++;
     Gdiplus::REAL *gdi_dashes = new Gdiplus::REAL[n];
-    for (int i = 0; i < n; i++) gdi_dashes[i] = dashes[i]/float(line_width_);
+    for (int i = 0; i < n; i++) gdi_dashes[i] = dashes[i]/float(gdi_width);
     pen_->SetDashPattern(gdi_dashes, n);
     delete[] gdi_dashes;
   }
