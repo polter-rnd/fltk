@@ -109,9 +109,9 @@ void Fl_GDIplus_Graphics_Driver::vertex(double x,double y) {
   transformed_vertex0(float(x*m.a + y*m.c + m.x) , float(x*m.b + y*m.d + m.y) );
 }
 
-/*void Fl_GDIplus_Graphics_Driver::end_points() {
-  //for (int i=0; i<n; i++) SetPixel(gc_, p[i].x, p[i].y, fl_RGB());
-}*/
+void Fl_GDIplus_Graphics_Driver::end_points() {
+  for (int i = 0; i < n; i++) point(p[i].x, p[i].y);
+}
 
 void Fl_GDIplus_Graphics_Driver::end_line() {
   if (n < 2) {

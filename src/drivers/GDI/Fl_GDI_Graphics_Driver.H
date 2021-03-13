@@ -196,6 +196,7 @@ public:
   virtual void pie_unscaled(int x, int y, int w, int h, double a1, double a2);
   virtual void transformed_vertex(double xf, double yf);
   virtual void vertex(double x,double y);
+  virtual void end_points();
   virtual void end_line();
   virtual void end_loop();
   virtual void end_polygon();
