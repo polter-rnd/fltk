@@ -178,13 +178,16 @@ public:
 
 class Fl_GDIplus_Graphics_Driver : public Fl_GDI_Graphics_Driver {
 private:
-  Gdiplus::Color color_;
+  Gdiplus::Color gdiplus_color_;
   Gdiplus::Pen *pen_;
   Gdiplus::SolidBrush *brush_;
 public:
   Fl_GDIplus_Graphics_Driver();
   virtual ~Fl_GDIplus_Graphics_Driver();
   static void shutdown(void);
+virtual void color(Fl_Color c);
+virtual Fl_Color color() { return color_; }
+virtual void color(uchar r, uchar g, uchar b);
   virtual void line(int x, int y, int x1, int y1);
   virtual void line(int x, int y, int x1, int y1, int x2, int y2);
   void loop(int x0, int y0, int x1, int y1, int x2, int y2);

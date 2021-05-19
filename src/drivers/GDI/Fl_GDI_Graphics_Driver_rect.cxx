@@ -218,8 +218,8 @@ void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
   bool AA = !(x == x1 || y == y1);
   Gdiplus::Graphics graphics_(gc_);
   graphics_.ScaleTransform(scale(), scale());
-  color_.SetFromCOLORREF(fl_RGB());
-  pen_->SetColor(color_);
+  //gdiplus_color_.SetFromCOLORREF(fl_RGB());
+  pen_->SetColor(gdiplus_color_);
   if (AA) graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_.DrawLine(pen_, x, y, x1, y1);
 }
@@ -236,8 +236,8 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
   path.CloseFigure();
   Gdiplus::Graphics graphics_(gc_);
   graphics_.ScaleTransform(scale(), scale());
-  color_.SetFromCOLORREF(fl_RGB());
-  pen_->SetColor(color_);
+  //gdiplus_color_.SetFromCOLORREF(fl_RGB());
+  pen_->SetColor(gdiplus_color_);
   graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_.DrawPath(pen_, &path);
 }
@@ -259,8 +259,8 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
     path.CloseFigure();
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
-    color_.SetFromCOLORREF(fl_RGB());
-    pen_->SetColor(color_);
+    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
+    pen_->SetColor(gdiplus_color_);
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_.DrawPath(pen_, &path);
   }
@@ -273,8 +273,8 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
   path.CloseFigure();
   Gdiplus::Graphics graphics_(gc_);
   graphics_.ScaleTransform(scale(), scale());
-  color_.SetFromCOLORREF(fl_RGB());
-  brush_->SetColor(color_);
+  //gdiplus_color_.SetFromCOLORREF(fl_RGB());
+  brush_->SetColor(gdiplus_color_);
   graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   graphics_.FillPath(brush_, &path);
 }
@@ -295,8 +295,8 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
     path.CloseFigure();
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
-    color_.SetFromCOLORREF(fl_RGB());
-    brush_->SetColor(color_);
+    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
+    brush_->SetColor(gdiplus_color_);
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     graphics_.FillPath(brush_, &path);
   }
