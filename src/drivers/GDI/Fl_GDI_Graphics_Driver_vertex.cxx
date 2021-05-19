@@ -129,7 +129,6 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
     pen_->SetColor(gdiplus_color_);
     graphics_.DrawPath(pen_, &path);
   }
@@ -149,7 +148,6 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
     pen_->SetColor(gdiplus_color_);
     graphics_.DrawPath(pen_, &path);
   }
@@ -173,7 +171,6 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
     brush_->SetColor(gdiplus_color_);
     graphics_.FillPath(brush_, &path);
   }
@@ -197,7 +194,6 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
     Gdiplus::Graphics graphics_(gc_);
     graphics_.ScaleTransform(scale(), scale());
     graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    //gdiplus_color_.SetFromCOLORREF(fl_RGB());
     brush_->SetColor(gdiplus_color_);
     graphics_.FillPath(brush_, &path);
   }
@@ -215,7 +211,6 @@ void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
   Gdiplus::Graphics graphics_(gc_);
   graphics_.ScaleTransform(scale(), scale());
   graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  //gdiplus_color_.SetFromCOLORREF(fl_RGB());
   if (what==POLYGON) {
     brush_->SetColor(gdiplus_color_);
     graphics_.FillPie(brush_, llx, lly, w, h, 0, 360);

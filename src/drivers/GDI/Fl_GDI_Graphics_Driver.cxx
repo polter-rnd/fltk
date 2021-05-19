@@ -27,7 +27,6 @@ static ULONG_PTR gdiplusToken = 0;
 
 Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Driver() {
   if (!fl_current_xmap) color(FL_BLACK);
-  //gdiplus_color_.SetFromCOLORREF(fl_RGB());
   pen_ = new Gdiplus::Pen(gdiplus_color_, 1);
   pen_->SetLineJoin(Gdiplus::LineJoinRound);
   pen_->SetStartCap(Gdiplus::LineCapFlat);
