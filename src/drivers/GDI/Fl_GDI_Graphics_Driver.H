@@ -184,6 +184,7 @@ private:
 public:
   Fl_GDIplus_Graphics_Driver();
   virtual ~Fl_GDIplus_Graphics_Driver();
+  bool active;
   static void shutdown(void);
 virtual void color(Fl_Color c);
 virtual Fl_Color color() { return color_; }
@@ -205,6 +206,8 @@ virtual void color(uchar r, uchar g, uchar b);
   virtual void end_polygon();
   virtual void end_complex_polygon();
   virtual void circle(double x, double y, double r);
+  virtual void antialias(int state);
+  virtual int antialias();
 };
 
 #endif // USE_GDIPLUS

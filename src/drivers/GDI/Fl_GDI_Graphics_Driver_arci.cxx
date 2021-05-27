@@ -66,6 +66,7 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
 
 void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
+  if (!active) return Fl_GDI_Graphics_Driver::arc_unscaled(x, y, w, h, a1, a2);
   Gdiplus::Graphics graphics_(gc_);
   pen_->SetColor(gdiplus_color_);
   Gdiplus::REAL oldw = pen_->GetWidth();
@@ -78,6 +79,7 @@ void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double
 
 void Fl_GDIplus_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
+  if (!active) return Fl_GDI_Graphics_Driver::pie_unscaled(x, y, w, h, a1, a2);
   Gdiplus::Graphics graphics_(gc_);
   brush_->SetColor(gdiplus_color_);
   graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);

@@ -32,12 +32,22 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   pen_->SetStartCap(Gdiplus::LineCapFlat);
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
+  active = true;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
 }
+
+void Fl_GDIplus_Graphics_Driver::antialias(int state) {
+  active = state;
+}
+
+int Fl_GDIplus_Graphics_Driver::antialias() {
+  return active;
+}
+
 #endif
 
 /*
