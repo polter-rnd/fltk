@@ -146,16 +146,8 @@ Fl_GIF_Image::Fl_GIF_Image(const char *filename) :
   The destructor frees all memory and server resources that are used by
   the image.
 
-  The (new and optional) third parameter \p length \b should be used so buffer
-  overruns (i.e. truncated images) can be checked. See note below.
-
-  If \p length is not used
-  - it defaults to -1 (unlimited size)
-  - buffer overruns will not be checked.
-
-  \note The optional parameter \p length is available since FLTK 1.4.0.
-    Not using it is deprecated and old code should be modified to use it.
-    This parameter will likely become mandatory in a future FLTK version.
+  The third parameter \p length is used to test for buffer overruns,
+  i.e. truncated images.
 
   Use Fl_Image::fail() to check if Fl_GIF_Image failed to load. fail() returns
   ERR_FILE_ACCESS if the file could not be opened or read, ERR_FORMAT if the
@@ -168,8 +160,10 @@ Fl_GIF_Image::Fl_GIF_Image(const char *filename) :
 
   \see Fl_GIF_Image::Fl_GIF_Image(const char *filename)
   \see Fl_Shared_Image
+
+  \since 1.4.0
 */
-Fl_GIF_Image::Fl_GIF_Image(const char *imagename, const unsigned char *data, const long length) :
+Fl_GIF_Image::Fl_GIF_Image(const char *imagename, const unsigned char *data, const size_t length) :
   Fl_Pixmap((char *const*)0)
 {
   Fl_Image_Reader rdr;
@@ -180,10 +174,43 @@ Fl_GIF_Image::Fl_GIF_Image(const char *imagename, const unsigned char *data, con
   }
 }
 
+/**
+  This constructor loads a GIF image from memory (deprecated).
+
+  \deprecated Please use
+    Fl_GIF_Image(const char *imagename, const unsigned char *data, const size_t length)
+    instead.
+
+  \note Buffer overruns will not be checked.
+
+  This constructor should not be used because the caller can't supply the
+  memory size and the image reader can't check for "end of memory" errors.
+
+  \note A new constructor with parameter \p length is available since FLTK 1.4.0.
+
+  \param[in] imagename  A name given to this image or NULL
+  \param[in] data       Pointer to the start of the GIF image in memory.
+
+  \see Fl_GIF_Image(const char *filename)
+  \see Fl_GIF_Image(const char *imagename, const unsigned char *data, const size_t length)
+*/
+Fl_GIF_Image::Fl_GIF_Image(const char *imagename, const unsigned char *data) :
+  Fl_Pixmap((char *const*)0)
+{
+  Fl_Image_Reader rdr;
+  if (rdr.open(imagename, data) == -1) {
+    ld(ERR_FILE_ACCESS);
+  } else {
+    load_gif_(rdr);
+  }
+}
+
 /*
- This method reads GIF image data and creates an RGB or RGBA image. The GIF
- format supports only 1 bit for alpha. To avoid code duplication, we use
- an Fl_Image_Reader that reads data from either a file or from memory.
+  This method reads GIF image data and creates an RGB or RGBA image. The GIF
+  format supports only 1 bit for alpha. The final image data is stored in
+  a modified XPM format (Fl_GIF_Image is a subclass of Fl_Pixmap).
+  To avoid code duplication, we use an Fl_Image_Reader that reads data from
+  either a file or from memory.
 */
 void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
 {
@@ -239,6 +266,8 @@ void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
   int CodeSize;         /* Code size, init from GIF header, increases... */
   char Interlace;
 
+  // Main parser loop: parse "blocks" until an image is found or error
+
   for (;;) {
 
     int i = rdr.read_byte();
@@ -276,8 +305,7 @@ void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
                     rdr.name(), ch, rdr.tell()-3, blocklen);
         ; // skip data
       }
-    }
-    else if (i == 0x2c) {       // an image: Image Descriptor follows
+    } else if (i == 0x2c) {       // an image: Image Descriptor follows
       // printf("Image Descriptor at offset %ld\n", rdr.tell());
       rdr.read_word();          // Image Left Position
       rdr.read_word();          // Image Top Position
@@ -298,18 +326,24 @@ void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
       }
       CHECK_ERROR
       break; // okay, this is the image we want
+    } else if (i == 0x3b) {       // Trailer (end of GIF data)
+      // printf("Trailer found at offset %ld\n", rdr.tell());
+      Fl::error("%s: no image data found.", rdr.name());
+      ld(ERR_NO_IMAGE); // this GIF file is "empty" (no image)
+      return;           // terminate
     } else {
-      Fl::warning("%s: unknown GIF code 0x%02x at offset %ld", rdr.name(), i, rdr.tell()-1);
-      blocklen = 0;
+      Fl::error("%s: unknown GIF code 0x%02x at offset %ld", rdr.name(), i, rdr.tell()-1);
+      ld(ERR_FORMAT); // broken file
+      return;         // terminate
     }
     CHECK_ERROR
 
-    // skip all the data subblocks:
+    // skip all data (sub)blocks:
     while (blocklen > 0) {
       rdr.skip(blocklen);
       blocklen = rdr.read_byte();
     }
-    // printf("End of data at offset %ld\n", rdr.tell());
+    // printf("End of data (sub)blocks at offset %ld\n", rdr.tell());
   }
 
   // read image data
@@ -379,6 +413,8 @@ void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
   uchar thisbyte = rdr.read_byte(); blocklen--;
   CHECK_ERROR
   int frombit = 0;
+
+  // loop to read LZW compressed image data
 
   for (;;) {
 
@@ -480,12 +516,13 @@ void Fl_GIF_Image::load_gif_(Fl_Image_Reader &rdr)
     OldCode = CurCode;
   }
 
-  // We are done reading the image, now convert to xpm:
+  // We are done reading the image, now convert to xpm
 
-  // allocate line pointer arrays:
   w(Width);
   h(Height);
   d(1);
+
+  // allocate line pointer arrays:
   new_data = new char*[Height+2];
 
   // transparent pixel must be zero, swap if it isn't:
