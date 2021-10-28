@@ -40,7 +40,7 @@ class Fl_Window;
 #  elif defined(__ANDROID__)
 #    include "android.H"
 #  elif defined(USE_WAYLAND)
-#    include "../src/drivers/Wayland/wayland.H"
+#    include "wayland.H"
 #  else // X11
 #   include <FL/fl_types.h>
 #   include <FL/Enumerations.H>
