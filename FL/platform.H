@@ -39,7 +39,7 @@ class Fl_Window;
 #    include "mac.H"
 #  elif defined(__ANDROID__)
 #    include "android.H"
-#  elif defined(__WAYLAND__)
+#  elif defined(USE_WAYLAND)
 #    include "../src/drivers/Wayland/wayland.H"
 #  else // X11
 #   include <FL/fl_types.h>

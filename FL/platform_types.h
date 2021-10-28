@@ -120,7 +120,7 @@ typedef struct HGLRC__ *GLContext;
    struct dirent {char d_name[1];};
 #endif
 
-#elif defined(__WAYLAND__)
+#elif defined(USE_WAYLAND)
 typedef struct buffer *Fl_Offscreen; /**< an offscreen drawing buffer */
 typedef struct _cairo_pattern* Fl_Bitmask;
 typedef struct flWaylandRegion* Fl_Region;
