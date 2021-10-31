@@ -278,11 +278,11 @@ WLCPPFILES = \
 	drivers/Wayland/Fl_get_key_wayland.cxx \
         drivers/Wayland/Fl_Wayland_System_Driver.cxx \
 	drivers/Wayland/Fl_Wayland_Screen_Driver.cxx \
- drivers/Wayland/Fl_Wayland_Window_Driver.cxx \
- drivers/Wayland/Fl_Wayland_Image_Surface_Driver.cxx \
-   drivers/Wayland/Fl_Wayland_Copy_Surface_Driver.cxx \
-   drivers/Wayland/Fl_Wayland_Graphics_Driver.cxx \
-      drivers/Wayland/Fl_wayland.cxx
+        drivers/Wayland/Fl_Wayland_Window_Driver.cxx \
+	drivers/Wayland/Fl_Wayland_Image_Surface_Driver.cxx \
+	drivers/Wayland/Fl_Wayland_Copy_Surface_Driver.cxx \
+	drivers/Wayland/Fl_Wayland_Graphics_Driver.cxx \
+	drivers/Wayland/Fl_wayland.cxx 
 
       
 #   fl_dnd_x.cxx  Fl_Native_File_Chooser_GTK.cxx
@@ -309,7 +309,7 @@ XLIBXFTFILES = \
 # This C file is used under condition: BUILD_WAYLAND
 WLCFILES = \
         xutf8/keysym2Ucs.c \
-        scandir_posix.c ../libdecor/build/xdg-shell-protocol.c
+        scandir_posix.c
 
 # These C++ files are used under condition: BUILD_WAYLAND
 WLXFTFILES = \
@@ -371,6 +371,10 @@ CFILES_X11 = $(XLIBCFILES) $(XLIBXCFILES)
 CFILES_XFT = $(XLIBCFILES)
 
 CFILES_WAYLAND = $(WLCFILES)
+EXTRA_WAYLAND =  ../libdecor/build/fl_libdecor.o ../libdecor/build/libdecor-cairo-blur.o \
+  ../libdecor/build/fl_libdecor-cairo.o ../libdecor/build/libdecor-fallback.o \
+  ../libdecor/build/xdg-decoration-protocol.o ../libdecor/build/xdg-shell-protocol.o \
+  ../libdecor/build/cursor-settings.o
 
 CFILES_WIN = $(GDICFILES)
 
@@ -378,6 +382,7 @@ CFILES += $(CFILES_$(BUILD))
 
 
 OBJECTS =  $(MMFILES:.mm=.o) $(CPPFILES:.cxx=.o) $(CFILES:.c=.o) $(UTF8CFILES:.c=.o)
+OBJECTS += $(EXTRA_$(BUILD))
 GLOBJECTS = $(GLCPPFILES:.cxx=.o)
 FLOBJECTS = $(FLCPPFILES:.cxx=.o)
 IMGOBJECTS = $(IMGCPPFILES:.cxx=.o)
