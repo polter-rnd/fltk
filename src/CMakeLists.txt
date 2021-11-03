@@ -234,7 +234,7 @@ if (USE_X11)
     drivers/Xlib/Fl_Font.H
   )
 
-elseif (USE_WAYLAND)
+elseif (OPTION_USE_WAYLAND)
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_BINARY_DIR}/src")
   set (DRIVER_FILES
     drivers/Posix/Fl_Posix_System_Driver.cxx
@@ -421,7 +421,7 @@ set (GL_DRIVER_FILES
 )
 if (USE_X11)
   set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/X11/Fl_X11_Gl_Window_Driver.cxx)
-elseif (USE_WAYLAND)
+elseif (OPTION_USE_WAYLAND)
   set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/Wayland/Fl_Wayland_Gl_Window_Driver.cxx)
 elseif (APPLE)
   set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/Cocoa/Fl_Cocoa_Gl_Window_Driver.cxx)
@@ -479,7 +479,7 @@ if (USE_X11)
   endif (NOT USE_XFT)
 endif (USE_X11)
 
-if (USE_WAYLAND)
+if (OPTION_USE_WAYLAND)
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I. -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
   list (APPEND CFILES
     xutf8/keysym2Ucs.c
@@ -490,7 +490,7 @@ if (USE_WAYLAND)
     ../libdecor/build/fl_libdecor.c
     ../libdecor/build/fl_libdecor-cairo.c
   )
-endif (USE_WAYLAND)
+endif (OPTION_USE_WAYLAND)
 
 if (WIN32)
   list (APPEND CFILES
@@ -581,7 +581,7 @@ if (USE_XFT)
   endif (LIB_fontconfig)
 endif (USE_XFT)
 
-if (USE_WAYLAND)
+if (OPTION_USE_WAYLAND)
   add_custom_command(
     OUTPUT xdg-shell-protocol.c xdg-shell-client-protocol.h
     COMMAND wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
@@ -608,7 +608,7 @@ if (USE_WAYLAND)
   if (NOT OPTION_BUILD_SHARED_LIBS)
     list (APPEND OPTIONAL_LIBS "-no-pie")
   endif (NOT OPTION_BUILD_SHARED_LIBS)
-endif (USE_WAYLAND)
+endif (OPTION_USE_WAYLAND)
 
 #######################################################################
 
